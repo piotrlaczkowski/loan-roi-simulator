@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bank Credit Simulator</title>
+  <!-- Bootstrap CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background: #f8f9fa;
+      margin-top: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+    }
+
+    .card {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      border: none;
+      border-radius: 8px;
+    }
+
+    .card-title {
+      margin-bottom: 1rem;
+      color: #007bff;
+    }
+
+    /* Fix chart container to prevent flickering or height changes */
+    #chartContainer {
+      position: relative;
+      height: 320px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div class="container mb-4">
+  <h1 class="text-center my-4">Bank Credit Simulator</h1>
+
+  <div class="row">
+    <!-- Left Column: Inputs -->
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Loan Parameters</h5>
+
+          <!-- Loan Amount -->
+          <div class="mb-3">
+            <label for="loanAmount" class="form-label">Loan Amount (€)</label>
+            <input type="number" class="form-control" id="loanAmount" value="200000"/>
+          </div>
+
+          <!-- Monthly Income -->
+          <div class="mb-3">
+            <label for="monthlyIncome" class="form-label">Monthly Income (€)</label>
+            <input type="number" class="form-control" id="monthlyIncome" value="4000"/>
+          </div>
+
+          <!-- Housing Value -->
+          <div class="mb-3">
+            <label for="housingValue" class="form-label">Housing Value (Current) (€)</label>
+            <input type="number" class="form-control" id="housingValue" value="250000"/>
+          </div>
+
+          <!-- Credit Duration -->
+          <div class="mb-3">
+            <label for="creditYears" class="form-label">Credit Duration (Years)</label>
+            <select class="form-select" id="creditYears">
+              <option value="10">10 Years</option>
+              <option value="15" selected>15 Years</option>
+              <option value="20">20 Years</option>
+            </select>
+          </div>
+
+          <!-- Interest Rate -->
+          <div class="mb-3">
+            <label for="interestRate" class="form-label">Interest Rate (%)</label>
+            <input
+              type="range"
+              class="form-range"
+              min="1"
+              max="10"
+              step="0.1"
+              id="interestRate"
+              value="3.7"
+              oninput="document.getElementById('interestRateLabel').innerText = interestRate.value"
+            />
+            <div>
+              Current: <span id="interestRateLabel">3.7</span>%
+            </div>
+          </div>
+
+          <!-- Inflation Rate -->
+          <div class="mb-3">
+            <label for="inflationRate" class="form-label">Annual Inflation Rate (%)</label>
+            <input
+              type="range"
+              class="form-range"
+              min="0"
+              max="10"
+              step="0.1"
+              id="inflationRate"
+              value="2.0"
+              oninput="document.getElementById('inflationRateLabel').innerText = inflationRate.value"
+            />
+            <div>
+              Current: <span id="inflationRateLabel">2.0</span>%
+            </div>
+          </div>
+
+          <!-- Housing Value Increase -->
+          <div class="mb-3">
+            <label for="housingIncrease" class="form-label">Annual Housing Value Increase (%)</label>
+            <input
+              type="range"
+              class="form-range"
+              min="0"
+              max="10"
+              step="0.1"
+              id="housingIncrease"
+              value="2.0"
+              oninput="document.getElementById('housingIncreaseLabel').innerText = housingIncrease.value"
+            />
+            <div>
+              Current: <span id="housingIncreaseLabel">2.0</span>%
+            </div>
+          </div>
+
+          <button class="btn btn-primary w-100" onclick="updateSimulation()">Simulate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Results -->
+    <div class="col-md-8">
+      <!-- Debt Ratio Alert -->
+      <div id="debtRatioAlert" class="alert alert-warning d-none" role="alert">
+        Your monthly payment exceeds the 37% debt-to-income ratio.
+      </div>
+
+      <!-- Key Results -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Key Results</h5>
+          <p><strong>Monthly Payment:</strong> <span id="monthlyPayment">€0</span></p>
+          <p><strong>Total Amount Paid:</strong> <span id="totalPaid">€0</span></p>
+          <p><strong>Total Interest Paid:</strong> <span id="totalInterest">€0</span></p>
+          <p><strong>Debt Ratio:</strong> <span id="debtRatio">0</span>% (Max allowed: 37%)</p>
+          <p>
+            <strong>Estimated Property Value after <span id="creditYearsLabel">15</span> years:</strong>
+            <span id="finalHousingValue">€0</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Payment & Interest Timeline</h5>
+          <div id="chartContainer">
+            <canvas id="balanceChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Recommendations</h5>
+          <ul id="recommendations"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let balanceChart;  // global Chart.js instance
+
+  function computeCreditSimulation(principal, annualInterestRate, creditYears) {
+    /**
+     * Amortization formula (monthly):
+     * Payment = P * [r / (1 - (1 + r)^(-n))]
+     * Where:
+     *  P = principal
+     *  r = monthly interest rate (annual interest / 12)
+     *  n = total number of months
+     */
+    const monthlyRate = annualInterestRate / 100 / 12;
+    const numberOfMonths = creditYears * 12;
+
+    let monthlyPayment;
+    if (monthlyRate === 0) {
+      monthlyPayment = principal / numberOfMonths;
+    } else {
+      monthlyPayment = principal * (monthlyRate / (1 - Math.pow(1 + monthlyRate, -numberOfMonths)));
+    }
+
+    let remainingBalance = principal;
+    let totalInterest = 0;
+    const timelineData = [];
+
+    for (let month = 1; month <= numberOfMonths; month++) {
+      const interestThisMonth = remainingBalance * monthlyRate;
+      const principalPaid = monthlyPayment - interestThisMonth;
+      totalInterest += interestThisMonth;
+      remainingBalance -= principalPaid;
+
+      if (remainingBalance < 0) remainingBalance = 0;
+      timelineData.push({
+        month,
+        remainingBalance,
+        paidInterest: interestThisMonth,
+      });
+
+      if (remainingBalance <= 0) break;
+    }
+
+    const totalPaid = monthlyPayment * numberOfMonths;
+
+    return {
+      monthlyPayment,
+      totalPaid,
+      totalInterest,
+      timelineData,
+    };
+  }
+
+  function estimateHousingValue(currentValue, annualIncrease, years) {
+    return currentValue * Math.pow(1 + annualIncrease / 100, years);
+  }
+
+  function computeInflationFactor(annualInflation, years) {
+    return Math.pow(1 + annualInflation / 100, years);
+  }
+
+  function initChart() {
+    const ctx = document.getElementById('balanceChart').getContext('2d');
+
+    balanceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Remaining Balance',
+            data: [],
+            borderColor: 'rgb(75,192,192)',
+            backgroundColor: 'rgba(75,192,192,0.2)',
+            yAxisID: 'y',
+            tension: 0.3,
+          },
+          {
+            label: 'Interest Paid (Monthly)',
+            data: [],
+            borderColor: 'rgb(255,99,132)',
+            backgroundColor: 'rgba(255,99,132,0.2)',
+            yAxisID: 'y1',
+            tension: 0.3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            type: 'linear',
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Balance (€)',
+            },
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Interest (€)',
+            },
+            grid: {
+              drawOnChartArea: false,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  function updateSimulation() {
+    // Collect inputs
+    const loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
+    const monthlyIncome = parseFloat(document.getElementById('monthlyIncome').value) || 0;
+    const housingValue = parseFloat(document.getElementById('housingValue').value) || 0;
+    const creditYearsElem = document.getElementById('creditYears');
+    const creditYears = parseInt(creditYearsElem.value, 10);
+
+    const interestRate = parseFloat(document.getElementById('interestRate').value) || 3.7;
+    const inflationRate = parseFloat(document.getElementById('inflationRate').value) || 2.0;
+    const housingIncrease = parseFloat(document.getElementById('housingIncrease').value) || 2.0;
+
+    document.getElementById('creditYearsLabel').textContent = creditYears;
+
+    // Compute loan details
+    const simulation = computeCreditSimulation(loanAmount, interestRate, creditYears);
+
+    // Update DOM for key results
+    document.getElementById('monthlyPayment').textContent = '€' + simulation.monthlyPayment.toFixed(2);
+    document.getElementById('totalPaid').textContent = '€' + simulation.totalPaid.toFixed(2);
+    document.getElementById('totalInterest').textContent = '€' + simulation.totalInterest.toFixed(2);
+
+    const monthlyPaymentRatio = (simulation.monthlyPayment / monthlyIncome) || 0;
+    document.getElementById('debtRatio').textContent = (monthlyPaymentRatio * 100).toFixed(2);
+
+    // Check debt ratio
+    const debtRatioAlert = document.getElementById('debtRatioAlert');
+    if (monthlyPaymentRatio > 0.37) {
+      debtRatioAlert.classList.remove('d-none');
+    } else {
+      debtRatioAlert.classList.add('d-none');
+    }
+
+    // Compute final housing value
+    const finalHousingValue = estimateHousingValue(housingValue, housingIncrease, creditYears);
+    document.getElementById('finalHousingValue').textContent = '€' + finalHousingValue.toFixed(2);
+
+    // Prepare data for chart update (no destroy/re-create)
+    const months = simulation.timelineData.map((t) => t.month);
+    const remainingBalance = simulation.timelineData.map((t) => t.remainingBalance);
+    const monthlyInterest = simulation.timelineData.map((t) => t.paidInterest);
+
+    // Update chart data
+    balanceChart.data.labels = months;
+    balanceChart.data.datasets[0].data = remainingBalance;
+    balanceChart.data.datasets[1].data = monthlyInterest;
+    balanceChart.update();
+
+    // Generate recommendations
+    const recommendationList = [];
+    if (monthlyPaymentRatio > 0.37) {
+      recommendationList.push(
+        `Your monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is over 37% of your income. Consider reducing the loan amount or extending the credit term.`
+      );
+    } else {
+      recommendationList.push(
+        `Monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is within the 37% debt ratio.`
+      );
+    }
+
+    recommendationList.push(
+      `Total interest over ${creditYears} years: €${simulation.totalInterest.toFixed(2)}.`
+    );
+
+    const netAppreciation = finalHousingValue - housingValue;
+    recommendationList.push(
+      `Estimated apartment value after ${creditYears} years: €${finalHousingValue.toFixed(2)} (a change of €${netAppreciation.toFixed(2)}).`
+    );
+
+    const inflationFactor = computeInflationFactor(inflationRate, creditYears);
+    recommendationList.push(
+      `Inflation factor over ${creditYears} years at ${inflationRate}%: ~${inflationFactor.toFixed(2)}x.`
+    );
+
+    // Update recommendations DOM
+    const recElem = document.getElementById('recommendations');
+    recElem.innerHTML = '';
+    recommendationList.forEach((r) => {
+      const li = document.createElement('li');
+      li.textContent = r;
+      recElem.appendChild(li);
+    });
+  }
+
+  window.onload = function() {
+    // Initialize the chart once
+    initChart();
+    // Perform the first simulation run
+    updateSimulation();
+
+    // Add event listeners for all inputs to refresh the chart smoothly
+    const inputIds = [
+      "loanAmount",
+      "monthlyIncome",
+      "housingValue",
+      "creditYears",
+      "interestRate",
+      "inflationRate",
+      "housingIncrease"
+    ];
+
+    inputIds.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener("input", updateSimulation);
+      }
+    });
+  };
+</script>
+</body>
+</html>
