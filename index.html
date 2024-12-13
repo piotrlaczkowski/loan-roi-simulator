@@ -96,7 +96,7 @@
 <body>
 <div class="container mb-4">
   <h1 class="text-center my-4" style="color: #2d3748;">
-    <i class="bi bi-bank"></i> Bank Credit &amp; Rental ROI Simulator (Advanced Overdrive + Strategy Tab)
+    <i class="bi bi-bank"></i> Bank Credit &amp; Rental ROI Simulator (Income Re-Injection + Overdrive)
   </h1>
 
   <!-- Nav Tabs -->
@@ -168,10 +168,10 @@
               <div class="mb-3">
                 <label for="manualDownPayment" class="form-label">Manual Down Payment (EUR)</label>
                 <input type="number" class="form-control" id="manualDownPayment" value="25000"/>
-                <small class="text-muted">Min recommended 10% in France</small>
+                <small class="text-muted">Minimum 10% recommended in France</small>
               </div>
 
-              <!-- Notary Fees Rate -->
+              <!-- Notary Fees -->
               <div class="mb-3">
                 <label for="notaryFeesRate" class="form-label">Notary Fees Rate (%)</label>
                 <input
@@ -187,7 +187,6 @@
                 <div>
                   Current: <span id="notaryFeesRateLabel">8</span>%
                 </div>
-                <small class="text-muted">~7-8% older property in France</small>
               </div>
 
               <!-- Loan Insurance Rate -->
@@ -211,7 +210,7 @@
               <!-- Monthly Income -->
               <div class="mb-3">
                 <label for="monthlyIncome" class="form-label">Monthly Income (Net, EUR)</label>
-                <input type="number" class="form-control" id="monthlyIncome" value="4000"/>
+                <input type="number" class="form-control" id="monthlyIncome" value="7000"/>
               </div>
 
               <!-- Credit Duration -->
@@ -219,9 +218,9 @@
                 <label for="creditYears" class="form-label">Credit Duration (Years)</label>
                 <select class="form-select" id="creditYears">
                   <option value="10">10 Years</option>
-                  <option value="15" selected>15 Years</option>
+                  <option value="15">15 Years</option>
                   <option value="20">20 Years</option>
-                  <option value="25">25 Years</option>
+                  <option value="25" selected>25 Years</option>
                 </select>
               </div>
 
@@ -232,18 +231,18 @@
                   type="range"
                   class="form-range"
                   min="1"
-                  max="10"
+                  max="15"
                   step="0.1"
                   id="interestRateSingle"
-                  value="3.7"
+                  value="10"
                   oninput="document.getElementById('interestRateSingleLabel').innerText = interestRateSingle.value"
                 />
                 <div>
-                  Current: <span id="interestRateSingleLabel">3.7</span>%
+                  Current: <span id="interestRateSingleLabel">10</span>%
                 </div>
               </div>
 
-              <!-- Payment Overdrive - up to ratio-limited max (theoretically up to 100% over baseline) -->
+              <!-- Payment Overdrive -->
               <div class="mb-3">
                 <label for="paymentOverdrive" class="form-label">Payment Overdrive (%)</label>
                 <input
@@ -253,13 +252,31 @@
                   max="100"
                   step="5"
                   id="paymentOverdrive"
-                  value="0"
+                  value="35"
                   oninput="document.getElementById('paymentOverdriveLabel').innerText = paymentOverdrive.value"
                 />
                 <div>
-                  Current: <span id="paymentOverdriveLabel">0</span>%
+                  Current: <span id="paymentOverdriveLabel">35</span>%
                 </div>
-                <small class="text-muted">Increases monthly payment above baseline, can't exceed 37% ratio overall</small>
+              </div>
+
+              <!-- Income Re-Injection -->
+              <div class="mb-3">
+                <label for="incomeInjection" class="form-label">Income Re-Injection (% of Net Income)</label>
+                <input
+                  type="range"
+                  class="form-range"
+                  min="0"
+                  max="50"
+                  step="5"
+                  id="incomeInjection"
+                  value="0"
+                  oninput="document.getElementById('incomeInjectionLabel').innerText = incomeInjection.value"
+                />
+                <div>
+                  Current: <span id="incomeInjectionLabel">0</span>%
+                </div>
+                <small class="text-muted">Extra portion of monthly income to put into mortgage each month</small>
               </div>
 
               <!-- Monthly Property Tax / Insurance -->
@@ -283,7 +300,7 @@
               </h5>
               <div class="mb-3">
                 <label for="monthlyRent" class="form-label">Monthly Rent (EUR)</label>
-                <input type="number" class="form-control" id="monthlyRent" value="800"/>
+                <input type="number" class="form-control" id="monthlyRent" value="1500"/>
               </div>
 
               <div class="mb-3">
@@ -325,7 +342,7 @@
                 <span>Key Results</span>
               </div>
               <p><strong>Calculated Loan Amount:</strong> <span id="calculatedLoanAmount">€0</span></p>
-              <p><strong>Monthly Payment (Overdrive):</strong> <span id="monthlyPayment">€0</span></p>
+              <p><strong>Monthly Payment (Overdrive + Income Injection):</strong> <span id="monthlyPayment">€0</span></p>
               <p><strong>Total Paid (Principal + Interest + Insurance):</strong> <span id="totalPaid">€0</span></p>
               <p><strong>Total Interest Paid:</strong> <span id="totalInterest">€0</span></p>
               <p>
@@ -334,12 +351,12 @@
               </p>
               <p>
                 <strong>Estimated Property Value after
-                  <span id="creditYearsLabel">15</span> years:</strong>
+                  <span id="creditYearsLabel">25</span> years:</strong>
                 <span id="finalHousingValue">€0</span>
               </p>
               <p>
                 <strong>Inflation Factor in
-                  <span id="inflationYearsLabel">15</span> yrs:</strong>
+                  <span id="inflationYearsLabel">25</span> yrs:</strong>
                 <span id="inflationFactorLabel">1.00</span>x
               </p>
             </div>
@@ -363,22 +380,6 @@
                   <div id="chartContainer">
                     <canvas id="balanceChart"></canvas>
                   </div>
-                  <div class="mt-3">
-                    <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse"
-                      data-bs-target="#paymentChartExplanation" aria-expanded="false" aria-controls="paymentChartExplanation">
-                      <i class="bi bi-info-circle"></i> More Info
-                    </button>
-                    <div class="collapse mt-2" id="paymentChartExplanation">
-                      <div class="card card-body" style="background: #f8f9fa;">
-                        <p>This chart shows:</p>
-                        <ul>
-                          <li>Remaining Balance (EUR) each month</li>
-                          <li>Monthly Interest (EUR) portion</li>
-                        </ul>
-                        <p>Down payment &amp; notary fees are out-of-pocket. Payment Overdrive shortens payoff timeline.</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -398,22 +399,6 @@
                   <div id="roiChartContainer">
                     <canvas id="roiChart"></canvas>
                   </div>
-                  <div class="mt-3">
-                    <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse"
-                      data-bs-target="#roiChartExplanation" aria-expanded="false" aria-controls="roiChartExplanation">
-                      <i class="bi bi-info-circle"></i> More Info
-                    </button>
-                    <div class="collapse mt-2" id="roiChartExplanation">
-                      <div class="card card-body" style="background: #f8f9fa;">
-                        <p>This chart compares:</p>
-                        <ul>
-                          <li><strong>Cumulative Interest (EUR)</strong></li>
-                          <li><strong>Cumulative Rental Profit (EUR)</strong>: net monthly rent * months</li>
-                        </ul>
-                        <p>The dashed vertical line is break-even. If not reached, labeled “No Break-Even Found.”</p>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div><!-- End ROI Chart Accordion Item -->
@@ -426,8 +411,8 @@
                 <i class="bi bi-house-door-fill"></i>
                 <span>Rental ROI Details</span>
               </div>
-              <p><strong>Monthly Rent (Occupancy-Adjusted):</strong> €<span id="adjustedRent">0</span></p>
-              <p><strong>Monthly Net Cashflow:</strong> €<span id="rentCashflow">0</span> 
+              <p><strong>Monthly Rent (Occupancy-Adjusted):</strong> <span id="adjustedRent">€0</span></p>
+              <p><strong>Monthly Net Cashflow:</strong> <span id="rentCashflow">€0</span> 
                 (<span id="rentROI">0</span>% ROI)
               </p>
               <p><strong>Break-Even on Interest:</strong> <span id="breakEvenRental">-</span> years</p>
@@ -460,8 +445,7 @@
           <i class="bi bi-diagram-3"></i> Multiple Scenarios
         </h3>
         <p class="text-muted">
-          Side-by-side scenario cards for 10, 15, 20, 25-year mortgages, factoring in Overdrive. 
-          Each card shows break-even estimate and actual payoff timeline.
+          Compare 10, 15, 20, 25-year mortgages side by side. Overdrive + Income Re-Injection also applies. Each card shows break-even estimate.
         </p>
         <div class="row" id="scenarioCards"></div>
       </div>
@@ -479,8 +463,8 @@
           <i class="bi bi-lightning"></i> Break-Even Strategies
         </h3>
         <p class="text-muted">
-          We systematically explore Overdrive % (in steps of 5%) from 0 up to the ratio-limited max, 
-          and show which Overdrive leads to the fastest break-even on interest, while respecting 37% ratio.
+          Tries feasible Overdrive and Income Re-Injection combos (in steps of 5%) up to ratio-limited maximum, 
+          listing fastest break-even solutions that remain under 37% debt ratio.
         </p>
         <div class="row" id="strategyCards"></div>
       </div>
@@ -516,21 +500,21 @@
       if (labelCount===0 || breakEvenIndex<=0) return;
       if (breakEvenIndex>labelCount) return;
 
-      const xPos = x.getPixelForValue(breakEvenIndex);
       ctx.save();
       ctx.beginPath();
       ctx.setLineDash([6,6]);
       ctx.strokeStyle='rgb(75,192,192)';
       ctx.lineWidth=2;
+      const xPos = x.getPixelForValue(breakEvenIndex);
       ctx.moveTo(xPos, top);
       ctx.lineTo(xPos, bottom);
       ctx.stroke();
 
-      const labelText=`Break-Even (Month ${breakEvenIndex})`;
-      ctx.font='bold 12px "Segoe UI", sans-serif';
-      const textWidth=ctx.measureText(labelText).width+10;
-      const labelX = xPos - textWidth/2;
-      const labelY = top+10;
+      const labelText = `Break-Even (Month ${breakEvenIndex})`;
+      ctx.font='bold 12px "Segoe UI",sans-serif';
+      const textWidth= ctx.measureText(labelText).width+10;
+      const labelX= xPos - (textWidth/2);
+      const labelY= top+10;
       ctx.fillStyle='rgba(75,192,192,0.8)';
       ctx.fillRect(labelX,labelY,textWidth,20);
       ctx.fillStyle='#fff';
@@ -540,11 +524,11 @@
   };
 
   /****************************
-   * K formatting
+   * kFormat
    ****************************/
   function kFormat(value) {
-    if (Math.abs(value)>=1000) {
-      const v = (value/1000).toFixed(1);
+    if(Math.abs(value)>=1000){
+      const v= (value/1000).toFixed(1);
       return v+'k EUR';
     }
     return '€'+value.toFixed(2);
@@ -554,8 +538,8 @@
    * initCharts
    ****************************/
   function initCharts() {
-    const ctx1=document.getElementById('balanceChart').getContext('2d');
-    balanceChart=new Chart(ctx1,{
+    const ctx1= document.getElementById('balanceChart').getContext('2d');
+    balanceChart= new Chart(ctx1,{
       type:'line',
       data:{
         labels:[],
@@ -589,7 +573,7 @@
             position:'left',
             title:{display:true,text:'Balance (EUR)'},
             ticks:{
-              callback:(val)=>kFormat(val),
+              callback:(val)=> kFormat(val),
             }
           },
           y1:{
@@ -598,15 +582,15 @@
             title:{display:true,text:'Interest (EUR)'},
             grid:{drawOnChartArea:false},
             ticks:{
-              callback:(val)=>kFormat(val),
+              callback:(val)=> kFormat(val),
             }
           },
         },
       }
     });
 
-    const ctx2=document.getElementById('roiChart').getContext('2d');
-    roiChart=new Chart(ctx2,{
+    const ctx2= document.getElementById('roiChart').getContext('2d');
+    roiChart= new Chart(ctx2, {
       type:'line',
       data:{
         labels:[],
@@ -617,7 +601,7 @@
             borderColor:'rgb(255,159,64)',
             backgroundColor:'rgba(255,159,64,0.2)',
             tension:0.3,
-            fill:true
+            fill:true,
           },
           {
             label:'Cumulative Rental Profit (EUR)',
@@ -625,8 +609,8 @@
             borderColor:'rgb(54,162,235)',
             backgroundColor:'rgba(54,162,235,0.2)',
             tension:0.3,
-            fill:true
-          }
+            fill:true,
+          },
         ],
       },
       options:{
@@ -642,7 +626,7 @@
             ticks:{
               callback:(val)=>kFormat(val),
             }
-          },
+          }
         },
       },
       plugins:[breakEvenPlugin],
@@ -662,6 +646,7 @@
       creditYears: parseInt(document.getElementById('creditYears').value)||15,
       interestRateSingle: parseFloat(document.getElementById('interestRateSingle').value)||3.7,
       paymentOverdrive: parseFloat(document.getElementById('paymentOverdrive').value)||0,
+      incomeInjection: parseFloat(document.getElementById('incomeInjection').value)||0,
       propertyTax: parseFloat(document.getElementById('propertyTax').value)||100,
       monthlyRent: parseFloat(document.getElementById('monthlyRent').value)||0,
       monthlyExpenses: parseFloat(document.getElementById('monthlyExpenses').value)||0,
@@ -673,23 +658,30 @@
    * computeMonthlyPayment
    ****************************/
   function computeMonthlyPayment(principal, annualInterestRate, creditYears) {
-    const monthlyRate= annualInterestRate/100/12;
+    const monthlyRate = annualInterestRate/100/12;
     const numberOfMonths= creditYears*12;
     if(monthlyRate===0)return principal/numberOfMonths;
-    return principal*(monthlyRate/(1-Math.pow(1+monthlyRate,-numberOfMonths)));
+    return principal*(monthlyRate/(1-Math.pow(1+monthlyRate, -numberOfMonths)));
   }
 
   /****************************
    * calcMaxLoan
    ****************************/
-  function calcMaxLoan(monthlyIncome, interestRate, creditYears, overdrive, propertyTax, insuranceYearlyRate) {
-    const maxRatioPayment=monthlyIncome*DEBT_RATIO_MAX;
+  function calcMaxLoan(inp) {
+    /**
+     * finalPayment= monthlyPaymentPI*(1+Overdrive%) + monthlyInsurance + propertyTax + (monthlyIncome*(incomeInjection%/100))
+     * ratio check => finalPayment <= monthlyIncome* DEBT_RATIO_MAX
+     */
+    const maxRatioPayment = inp.monthlyIncome* DEBT_RATIO_MAX;
     let low=0, high=2_000_000, principal=0;
     for(let i=0;i<50;i++){
       const mid=(low+high)/2;
-      const monthlyPaymentPI=computeMonthlyPayment(mid,interestRate,creditYears);
-      const monthlyInsurance=mid*(insuranceYearlyRate/100)/12;
-      const finalPayment= (monthlyPaymentPI*(1+overdrive/100)) + monthlyInsurance + propertyTax;
+      const monthlyPaymentPI= computeMonthlyPayment(mid, inp.interestRateSingle, inp.creditYears);
+      const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+inp.paymentOverdrive/100);
+      const monthlyInsurance= mid*(inp.insuranceYearlyRate/100)/12;
+      const injection= inp.monthlyIncome*(inp.incomeInjection/100);
+      const finalPayment= monthlyPaymentPIOverdrive+ monthlyInsurance+ inp.propertyTax + injection;
+
       if(finalPayment> maxRatioPayment) {
         high=mid;
       } else {
@@ -708,46 +700,44 @@
     recElem.innerHTML='';
     let recs=[];
 
-    if(data.manualDownPayment< (data.propertyPrice*0.1)){
+    if(data.manualDownPayment< (data.propertyPrice*0.1)) {
       recs.push(`Down payment €${data.manualDownPayment.toFixed(2)} < 10% of property price €${data.propertyPrice.toFixed(2)}. 
-        Typically 10%+ is required in France.`);
+       Typically 10%+ is required in France.`);
     }
 
-    if(data.debtRatio>DEBT_RATIO_MAX) {
-      recs.push(
-        `Your monthly payment (€${data.finalMonthlyPayment.toFixed(2)}) is >37% net income. 
-         Reduce Overdrive or lower principal.`
-      );
+    if(data.debtRatio>DEBT_RATIO_MAX){
+      recs.push(`Your monthly payment €${data.finalMonthlyPayment.toFixed(2)} >37% net income. 
+       Lower Overdrive or Injection or reduce principal.`);
     } else {
-      recs.push(
-        `Monthly payment (~€${data.finalMonthlyPayment.toFixed(2)}) is within 37% ratio.`
-      );
+      recs.push(`Monthly payment (~${kFormat(data.finalMonthlyPayment)}) is within the 37% ratio limit.`);
     }
 
-    recs.push(`Total interest: ~€${data.totalInterest.toFixed(2)}. 
-      Insurance adds ~€${(data.monthlyInsurance*timelineMonths).toFixed(2)} total. 
-      Overdrive +${data.paymentOverdrive}% shortened payoff timeline.`);
+    recs.push(`Total interest: ~${kFormat(data.totalInterest)}. 
+      Insurance adds ~${kFormat(data.monthlyInsurance*timelineMonths)}. 
+      Overdrive +${data.paymentOverdrive}%, Income Injection +${data.incomeInjection}%.`);
 
-    const netAppreciation= data.finalValue-data.propertyPrice;
-    recs.push(`Estimated property value post-credit: ~€${data.finalValue.toFixed(2)} 
-      (gain ~€${netAppreciation.toFixed(2)} @2% annual growth). Overdrive can significantly reduce interest.`);
+    const netAppreciation= data.finalValue- data.propertyPrice;
+    recs.push(`Estimated property value after credit: ~${kFormat(data.finalValue)} 
+      (gain ~€${netAppreciation.toFixed(2)}). 
+      Extra injection from monthly income shortens payoff timeline.`);
 
     if(data.netRentCashflow<0){
-      recs.push(`Negative monthly rent CF (€${data.netRentCashflow.toFixed(2)}). Possibly raise rent or reduce Overdrive.`);
+      recs.push(`Monthly net rent CF is negative (€${data.netRentCashflow.toFixed(2)}). 
+       Consider higher injection or Overdrive if finances allow.`);
     } else {
       recs.push(`Net rent CF: €${data.netRentCashflow.toFixed(2)}, ROI: ${data.rentROI.toFixed(2)}%. 
-        Break-even in ~${data.breakEvenYears} yrs.`);
+       Break-even in ~${data.breakEvenYears} yrs.`);
     }
 
-    if(data.maxLoan<data.propertyPrice){
-      recs.push(`Max affordable loan (~€${data.maxLoan.toFixed(2)}) < property price (€${data.propertyPrice.toFixed(2)}). 
-        Increase down payment or reduce Overdrive.`);
+    if(data.maxLoan< data.propertyPrice){
+      recs.push(`Max affordable loan ~${kFormat(data.maxLoan)} < property price ~${kFormat(data.propertyPrice)}. 
+        Raise down payment or reduce Overdrive/Injection demands.`);
     } else {
-      recs.push(`Likely you can afford this property. Max loan ~€${data.maxLoan.toFixed(2)} at 37% ratio.`);
+      recs.push(`You can afford this property under 37% ratio. Max loan ~${kFormat(data.maxLoan)}.`);
     }
 
-    recs.push(`Notary fees ~€${data.notaryFees.toFixed(2)}, DP=€${data.manualDownPayment.toFixed(2)}. 
-      Payment Overdrive demanded stable finances. Keep emergency fund.`);
+    recs.push(`Notary fees ~${(data.notaryFees).toFixed(2)} EUR. Overdrive + income injection can drastically lower interest 
+      but ensure your monthly finances remain stable.`);
 
     recs.forEach(r=>{
       const li=document.createElement('li');
@@ -761,42 +751,41 @@
    ****************************/
   function updateSingleScenario() {
     const inp=gatherInputs();
-
-    const notaryFees = inp.propertyPrice*(inp.notaryFeesRate/100);
-    const borrowedPrincipal = Math.max(inp.propertyPrice - inp.manualDownPayment,0);
+    const notaryFees = inp.propertyPrice* (inp.notaryFeesRate/100);
+    const borrowedPrincipal= Math.max(inp.propertyPrice-inp.manualDownPayment,0);
 
     // baseline monthly P+I
     const monthlyPaymentPI= computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, inp.creditYears);
-    // apply Overdrive
     const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+ inp.paymentOverdrive/100);
-    // monthly insurance
     const monthlyInsurance= borrowedPrincipal*(inp.insuranceYearlyRate/100)/12;
-    // final monthly Payment
-    const finalMonthlyPayment= monthlyPaymentPIOverdrive + monthlyInsurance + inp.propertyTax;
+    // additional injection from monthly income
+    const monthlyIncomeInjection= inp.monthlyIncome*(inp.incomeInjection/100);
 
-    // payoff loop
+    const finalMonthlyPayment= monthlyPaymentPIOverdrive + monthlyInsurance + inp.propertyTax + monthlyIncomeInjection;
+
+    // payoff loop ignoring nominal creditYears, as Overdrive + injection shortens term
     let timelineData=[];
     let monthsCount=0;
     let remainingBalance= borrowedPrincipal;
     let totalInterest=0;
     const monthlyRate= inp.interestRateSingle/100/12;
 
-    while(remainingBalance>0 && monthsCount<600){ 
+    while(remainingBalance>0 && monthsCount<600){
       monthsCount++;
       const interestThisMonth= remainingBalance*monthlyRate;
       totalInterest+=interestThisMonth;
-      let principalPaid= monthlyPaymentPIOverdrive - interestThisMonth;
+      let principalPaid= (monthlyPaymentPIOverdrive + monthlyIncomeInjection) - interestThisMonth;
       if(principalPaid<0) principalPaid=0;
       remainingBalance-= principalPaid;
       if(remainingBalance<0) remainingBalance=0;
-      timelineData.push({month:monthsCount, remainingBalance, paidInterest:interestThisMonth});
+      timelineData.push({month:monthsCount, paidInterest:interestThisMonth, remainingBalance});
       if(remainingBalance<=0) break;
     }
 
-    const totalInsurance= monthlyInsurance*monthsCount;
-    const totalTax= inp.propertyTax*monthsCount;
-    const totalPI= monthlyPaymentPIOverdrive*monthsCount;
-    const totalPaid= totalPI + totalInsurance + totalTax;
+    const totalInsurance= monthlyInsurance* monthsCount;
+    const totalTax= inp.propertyTax* monthsCount;
+    const totalPI= (monthlyPaymentPIOverdrive+ monthlyIncomeInjection)* monthsCount;
+    const totalPaid= totalPI+ totalInsurance+ totalTax;
 
     document.getElementById('calculatedLoanAmount').textContent= kFormat(borrowedPrincipal);
     document.getElementById('monthlyPayment').textContent= kFormat(finalMonthlyPayment);
@@ -804,7 +793,7 @@
     document.getElementById('totalInterest').textContent= kFormat(totalInterest);
 
     // ratio
-    const ratio=(inp.monthlyIncome>0)? (finalMonthlyPayment/inp.monthlyIncome):0;
+    const ratio= (inp.monthlyIncome>0)? (finalMonthlyPayment/inp.monthlyIncome):0;
     document.getElementById('debtRatio').textContent= (ratio*100).toFixed(2);
     const debtRatioAlert= document.getElementById('debtRatioAlert');
     if(ratio> DEBT_RATIO_MAX) debtRatioAlert.classList.remove('d-none');
@@ -812,21 +801,22 @@
 
     document.getElementById('creditYearsLabel').textContent= inp.creditYears;
     document.getElementById('inflationYearsLabel').textContent= inp.creditYears;
-    const finalValue= inp.propertyPrice*Math.pow(1+DEFAULT_HOUSING_INCREASE/100, inp.creditYears);
+    const finalValue= inp.propertyPrice* Math.pow(1+ DEFAULT_HOUSING_INCREASE/100, inp.creditYears);
     document.getElementById('finalHousingValue').textContent= kFormat(finalValue);
-    const inflationFactor= Math.pow(1+DEFAULT_INFLATION/100, inp.creditYears);
+    const inflationFactor= Math.pow(1+ DEFAULT_INFLATION/100, inp.creditYears);
     document.getElementById('inflationFactorLabel').textContent= inflationFactor.toFixed(2);
 
     // Payment & Interest Chart
-    balanceChart.data.labels= timelineData.map(t=> t.month);
+    balanceChart.data.labels= timelineData.map(t=>t.month);
     balanceChart.data.datasets[0].data= timelineData.map(t=> t.remainingBalance);
     balanceChart.data.datasets[1].data= timelineData.map(t=> t.paidInterest);
     balanceChart.update();
 
     // ROI Chart
-    let rentIncome= inp.monthlyRent*(inp.occupancyRate/100);
-    let netRentCashflow= rentIncome - inp.monthlyExpenses - finalMonthlyPayment;
-    document.getElementById('adjustedRent').textContent= netRentCashflow>=0? kFormat(rentIncome): rentIncome.toFixed(2);
+    const rentIncome= inp.monthlyRent*(inp.occupancyRate/100);
+    const netRentCashflow= rentIncome- inp.monthlyExpenses- finalMonthlyPayment;
+
+    document.getElementById('adjustedRent').textContent= kFormat(rentIncome);
     document.getElementById('rentCashflow').textContent= netRentCashflow.toFixed(2);
 
     let rentROI=0;
@@ -838,30 +828,33 @@
 
     for(let i=0;i<timelineData.length;i++){
       cumInterest+= timelineData[i].paidInterest;
+      // monthly net includes negative or positive monthly difference
       cumProfit+= netRentCashflow;
-      roiTimeline.push({month:timelineData[i].month, cumInterest, cumProfit});
+      roiTimeline.push({month: timelineData[i].month, cumInterest, cumProfit});
       if(breakEvenIndex<0 && cumProfit>=cumInterest){
         breakEvenIndex= timelineData[i].month;
       }
     }
 
-    roiChart.data.labels= roiTimeline.map(t=>t.month);
+    roiChart.data.labels= roiTimeline.map(t=> t.month);
     roiChart.data.datasets[0].data= roiTimeline.map(t=> t.cumInterest);
     roiChart.data.datasets[1].data= roiTimeline.map(t=> t.cumProfit);
 
     let lineIndex=(breakEvenIndex>0)? breakEvenIndex: roiTimeline.length+1;
-    roiChart.options.plugins.breakEvenPlugin.breakEvenIndex= lineIndex;
+    roiChart.options.plugins.breakEvenPlugin.breakEvenIndex=lineIndex;
     roiChart.update();
 
     let breakEvenYears='-';
-    if(netRentCashflow>0) breakEvenYears=(totalInterest/(netRentCashflow*12)).toFixed(2);
+    if(netRentCashflow>0) {
+      breakEvenYears=(totalInterest/(netRentCashflow*12)).toFixed(2);
+    }
     document.getElementById('breakEvenRental').textContent= breakEvenYears;
 
-    // maxLoan with Overdrive in mind
-    const maxLoan= calcMaxLoan(inp.monthlyIncome, inp.interestRateSingle, inp.creditYears, inp.paymentOverdrive, inp.propertyTax, inp.insuranceYearlyRate);
-    document.getElementById('maxLoanPossible').textContent= kFormat(maxLoan);
+    // more realistic maxLoan
+    const maxLoanVal= calcMaxLoan(inp);
+    document.getElementById('maxLoanPossible').textContent= kFormat(maxLoanVal);
 
-    // Build Recommendations
+    // recommendations
     buildRecommendations({
       manualDownPayment: inp.manualDownPayment,
       propertyPrice: inp.propertyPrice,
@@ -873,15 +866,16 @@
       netRentCashflow,
       rentROI,
       breakEvenYears,
-      maxLoan,
-      paymentOverdrive: inp.paymentOverdrive,
       notaryFees,
-      debtRatio: ratio
+      debtRatio: ratio,
+      paymentOverdrive: inp.paymentOverdrive,
+      incomeInjection: inp.incomeInjection,
+      maxLoan: maxLoanVal
     }, timelineData.length);
 
     // multi scenario
     buildMultiScenarios();
-    // break-even strategies
+    // strategy tab
     buildStrategyTab();
   }
 
@@ -894,14 +888,16 @@
     scenarioCards.innerHTML='';
 
     const durations=[10,15,20,25];
-    const borrowedPrincipal=Math.max(inp.propertyPrice-inp.manualDownPayment,0);
+    const borrowedPrincipal= Math.max(inp.propertyPrice- inp.manualDownPayment,0);
 
     durations.forEach(dy=>{
       const monthlyPaymentPI= computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, dy);
-      const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+inp.paymentOverdrive/100);
+      const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+ inp.paymentOverdrive/100);
       const monthlyInsurance= borrowedPrincipal*(inp.insuranceYearlyRate/100)/12;
+      const monthlyIncomeInjection= inp.monthlyIncome*(inp.incomeInjection/100);
 
-      const finalMonthlyPayment= monthlyPaymentPIOverdrive+monthlyInsurance+inp.propertyTax;
+      const finalMonthlyPayment= monthlyPaymentPIOverdrive+ monthlyInsurance+ inp.propertyTax + monthlyIncomeInjection;
+
       let timelineData=[];
       let monthsCount=0;
       let remainingBalance= borrowedPrincipal;
@@ -910,37 +906,42 @@
 
       while(remainingBalance>0 && monthsCount<600){
         monthsCount++;
-        const interestThisMonth=remainingBalance*monthlyRate;
-        totalInterest+=interestThisMonth;
-        let principalPaid= monthlyPaymentPIOverdrive-interestThisMonth;
+        const interestThisMonth= remainingBalance* monthlyRate;
+        totalInterest+= interestThisMonth;
+        let principalPaid= monthlyPaymentPIOverdrive + monthlyIncomeInjection - interestThisMonth;
         if(principalPaid<0) principalPaid=0;
         remainingBalance-= principalPaid;
-        if(remainingBalance<0)remainingBalance=0;
+        if(remainingBalance<0) remainingBalance=0;
         timelineData.push({month:monthsCount, remainingBalance, paidInterest:interestThisMonth});
         if(remainingBalance<=0) break;
       }
-      const totalInsurance= monthsCount*monthlyInsurance;
-      const totalTax= monthsCount*inp.propertyTax;
-      const totalPI= monthsCount* monthlyPaymentPIOverdrive;
-      const totalPaid= totalPI+ totalInsurance + totalTax;
-      const ratio=(inp.monthlyIncome>0)?(finalMonthlyPayment/inp.monthlyIncome):0;
-      const ratioExceeded=(ratio> DEBT_RATIO_MAX);
+
+      const totalInsurance= monthsCount* monthlyInsurance;
+      const totalTax= monthsCount* inp.propertyTax;
+      const totalPI= monthsCount*(monthlyPaymentPIOverdrive+ monthlyIncomeInjection);
+      const totalPaid= totalPI+ totalInsurance+ totalTax;
+
+      const ratio= (inp.monthlyIncome>0)? (finalMonthlyPayment/inp.monthlyIncome): 0;
+      const ratioExceeded= ratio> DEBT_RATIO_MAX;
 
       const rentIncome= inp.monthlyRent*(inp.occupancyRate/100);
-      const netRentCashflow= rentIncome- inp.monthlyExpenses- finalMonthlyPayment;
+      const netRentCashflow= rentIncome- inp.monthlyExpenses - finalMonthlyPayment;
+
       let breakEvenYears='-';
       if(netRentCashflow>0){
-        breakEvenYears=(totalInterest/(netRentCashflow*12)).toFixed(2);
+        breakEvenYears= (totalInterest/(netRentCashflow*12)).toFixed(2);
       }
+
       let rentROI=0;
       if(finalMonthlyPayment>0) rentROI=(netRentCashflow/finalMonthlyPayment)*100;
 
-      const cardDiv=document.createElement('div');
+      const cardDiv= document.createElement('div');
       cardDiv.className='col-md-6 col-lg-3';
       cardDiv.innerHTML=`
         <div class="card scenario-card h-100 border-${ratioExceeded?'danger':'success'}">
           <div class="card-body">
-            <h5 class="card-title"><i class="bi bi-stopwatch"></i> ${dy}-Year + Overdrive</h5>
+            <h5 class="card-title"><i class="bi bi-stopwatch"></i> ${dy}-Year + Ovr ${inp.paymentOverdrive}% + Inj ${inp.incomeInjection}%
+            </h5>
             <p><strong>Principal:</strong> ${kFormat(borrowedPrincipal)}</p>
             <p><strong>Monthly Pay:</strong> ${kFormat(finalMonthlyPayment)}</p>
             <p><strong>Term (approx.):</strong> ${monthsCount} months (~${(monthsCount/12).toFixed(1)} yrs)</p>
@@ -962,85 +963,91 @@
    * buildStrategyTab
    ****************************/
   function buildStrategyTab() {
-    // We'll generate overdrive increments of 5% from 0% to the ratio-limited max
-    const container=document.getElementById('strategyCards');
+    /**
+     * systematically tries Overdrive=0..100 step 5
+     * IncomeInj=0..50 step 5
+     * check ratio constraint, pick best break-even
+     */
+    const container= document.getElementById('strategyCards');
     container.innerHTML='';
 
-    const inp=gatherInputs();
-    const borrowedPrincipal= Math.max(inp.propertyPrice-inp.manualDownPayment,0);
+    const inp= gatherInputs();
+    const borrowedPrincipal= Math.max(inp.propertyPrice - inp.manualDownPayment,0);
+    let combos=[];
 
-    // We'll find the maximum Overdrive possible so finalPayment <= monthlyIncome*0.37
-    let overdriveCandidates=[];
-    for(let od=0;od<=100;od+=5){
-      // build final monthly
-      const monthlyPaymentPI= computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, inp.creditYears);
-      const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+od/100);
-      const monthlyInsurance= borrowedPrincipal*(inp.insuranceYearlyRate/100)/12;
-      const finalMonthlyPayment= monthlyPaymentPIOverdrive+monthlyInsurance+inp.propertyTax;
-      const ratio=(inp.monthlyIncome>0)? (finalMonthlyPayment/inp.monthlyIncome): 0;
-      if(ratio<= DEBT_RATIO_MAX){
-        // we can pay this overdrive
-        // payoff loop
-        let timelineData=[];
-        let monthsCount=0;
-        let remainingBalance= borrowedPrincipal;
-        let totalInterest=0;
-        const monthlyRate= inp.interestRateSingle/100/12;
+    for(let od=0; od<=100; od+=5){
+      for(let inj=0; inj<=50; inj+=5){
+        // final monthly
+        const monthlyPaymentPI= computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, inp.creditYears);
+        const monthlyPaymentPIOverdrive= monthlyPaymentPI*(1+od/100);
+        const monthlyInsurance= borrowedPrincipal*(inp.insuranceYearlyRate/100)/12;
+        const monthlyIncomeInjection= inp.monthlyIncome*(inj/100);
 
-        while(remainingBalance>0 && monthsCount<600){
-          monthsCount++;
-          const interestThisMonth= remainingBalance*monthlyRate;
-          totalInterest+=interestThisMonth;
-          let principalPaid= monthlyPaymentPIOverdrive-interestThisMonth;
-          if(principalPaid<0)principalPaid=0;
-          remainingBalance-= principalPaid;
-          if(remainingBalance<0) remainingBalance=0;
-          timelineData.push({month:monthsCount,paidInterest:interestThisMonth,remainingBalance});
-          if(remainingBalance<=0) break;
-        }
-
-        const netRentCashflow= (inp.monthlyRent*(inp.occupancyRate/100)) - inp.monthlyExpenses - finalMonthlyPayment;
-        let breakEvenYears='-';
-        if(netRentCashflow>0) {
+        const finalMonthlyPayment= monthlyPaymentPIOverdrive+ monthlyInsurance+ inp.propertyTax+ monthlyIncomeInjection;
+        const ratio= (inp.monthlyIncome>0)?(finalMonthlyPayment/inp.monthlyIncome):0;
+        if(ratio<= DEBT_RATIO_MAX) {
+          // payoff loop
+          let timelineData=[];
+          let monthsCount=0;
+          let remainingBalance= borrowedPrincipal;
           let totalInterest=0;
-          timelineData.forEach(td=> totalInterest+= td.paidInterest);
-          breakEvenYears=(totalInterest/(netRentCashflow*12)).toFixed(2);
-        }
+          const monthlyRate= inp.interestRateSingle/100/12;
 
-        overdriveCandidates.push({
-          overdrive:od,
-          monthsCount,
-          breakEvenYears,
-        });
+          while(remainingBalance>0 && monthsCount<600){
+            monthsCount++;
+            const interestThisMonth= remainingBalance*monthlyRate;
+            totalInterest+= interestThisMonth;
+            let principalPaid= monthlyPaymentPIOverdrive+ monthlyIncomeInjection - interestThisMonth;
+            if(principalPaid<0) principalPaid=0;
+            remainingBalance-= principalPaid;
+            if(remainingBalance<0) remainingBalance=0;
+            timelineData.push({month:monthsCount, paidInterest:interestThisMonth});
+            if(remainingBalance<=0) break;
+          }
+
+          // net rent
+          const rentIncome= inp.monthlyRent*(inp.occupancyRate/100);
+          const netRentCashflow= rentIncome- inp.monthlyExpenses - finalMonthlyPayment;
+          let breakEvenYears='-';
+          if(netRentCashflow>0){
+            // sum interest
+            let totalInt=0;
+            timelineData.forEach(t=> totalInt+= t.paidInterest);
+            breakEvenYears= (totalInt/(netRentCashflow*12)).toFixed(2);
+          }
+          combos.push({
+            overdrive:od,
+            injection: inj,
+            monthsCount,
+            breakEvenYears,
+          });
+        }
       }
     }
-    // find candidate with minimal breakEvenYears
-    overdriveCandidates=overdriveCandidates.filter(c=> c.breakEvenYears!=='-');
-    if(overdriveCandidates.length===0) {
-      container.innerHTML=`<p class="text-danger">No feasible Overdrive found that yields a positive net rent cashflow break-even. Possibly negative monthly net or high ratio.</p>`;
+
+    combos= combos.filter(c=> c.breakEvenYears!=='-');
+    if(combos.length===0){
+      container.innerHTML=`<p class="text-danger">No feasible Overdrive+Injection combos found that yield positive net rent break-even under 37% ratio.</p>`;
       return;
     }
-
-    overdriveCandidates.sort((a,b)=> parseFloat(a.breakEvenYears)-parseFloat(b.breakEvenYears));
-    // top candidate
-    const topCandidate=overdriveCandidates[0];
-
-    // Let's show multiple: top 3 or so
-    const topN= overdriveCandidates.slice(0,Math.min(overdriveCandidates.length,3));
+    combos.sort((a,b)=> parseFloat(a.breakEvenYears)- parseFloat(b.breakEvenYears));
+    const topN= combos.slice(0, Math.min(3, combos.length));
     topN.forEach((cand, idx)=>{
-      const card = document.createElement('div');
-      card.className='col-md-6 col-lg-4';
-      card.innerHTML=`
-        <div class="card scenario-card h-100 border-success">
+      const cardDiv=document.createElement('div');
+      cardDiv.className='col-md-6 col-lg-4';
+      cardDiv.innerHTML=`
+        <div class="card scenario-card border-success h-100">
           <div class="card-body">
-            <h5 class="card-title text-success"><i class="bi bi-lightning"></i> Overdrive ${cand.overdrive}%</h5>
+            <h5 class="card-title text-success">
+              <i class="bi bi-lightning"></i> OD ${cand.overdrive}% + Inj ${cand.injection}%
+            </h5>
             <p><strong>Approx Term:</strong> ${cand.monthsCount} months (~${(cand.monthsCount/12).toFixed(1)} yrs)</p>
             <p><strong>Break-Even:</strong> ${cand.breakEvenYears} yrs</p>
-            <p class="text-muted small">This Overdrive still respects the 37% ratio constraint</p>
+            <p class="text-muted small">Satisfies 37% ratio constraint</p>
           </div>
         </div>
       `;
-      container.appendChild(card);
+      container.appendChild(cardDiv);
     });
   }
 
@@ -1049,18 +1056,19 @@
    ****************************/
   window.addEventListener('load', ()=>{
     initCharts();
-    const updateAll=()=>updateSingleScenario();
+    const updateAll=()=> updateSingleScenario();
+
     const inputIds=[
       "housingValue","manualDownPayment","notaryFeesRate","insuranceRate",
       "monthlyIncome","creditYears","interestRateSingle","propertyTax",
-      "monthlyRent","monthlyExpenses","occupancyRate","paymentOverdrive"
+      "monthlyRent","monthlyExpenses","occupancyRate","paymentOverdrive",
+      "incomeInjection"
     ];
     inputIds.forEach(id=>{
       const elem=document.getElementById(id);
-      if(elem){
-        elem.addEventListener("input",updateAll);
-      }
+      if(elem) elem.addEventListener("input", updateAll);
     });
+
     updateAll();
   });
 </script>
