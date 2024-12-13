@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Bank Credit Simulator</title>
+  <title>Bank Credit Simulator with Rent Simulation</title>
   <!-- Bootstrap CSS -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -18,7 +18,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
     }
 
     .card {
@@ -32,7 +32,6 @@
       color: #007bff;
     }
 
-    /* Fix chart container to prevent flickering or height changes */
     #chartContainer {
       position: relative;
       height: 320px;
@@ -42,14 +41,14 @@
 </head>
 <body>
 <div class="container mb-4">
-  <h1 class="text-center my-4">Bank Credit Simulator</h1>
+  <h1 class="text-center my-4">Bank Credit & Rental ROI Simulator</h1>
 
   <div class="row">
     <!-- Left Column: Inputs -->
     <div class="col-md-4">
       <div class="card mb-4">
         <div class="card-body">
-          <h5 class="card-title">Loan Parameters</h5>
+          <h5 class="card-title">Loan & Income Parameters</h5>
 
           <!-- Loan Amount -->
           <div class="mb-3">
@@ -59,14 +58,8 @@
 
           <!-- Monthly Income -->
           <div class="mb-3">
-            <label for="monthlyIncome" class="form-label">Monthly Income (€)</label>
+            <label for="monthlyIncome" class="form-label">Monthly Income (Net) (€)</label>
             <input type="number" class="form-control" id="monthlyIncome" value="4000"/>
-          </div>
-
-          <!-- Housing Value -->
-          <div class="mb-3">
-            <label for="housingValue" class="form-label">Housing Value (Current) (€)</label>
-            <input type="number" class="form-control" id="housingValue" value="250000"/>
           </div>
 
           <!-- Credit Duration -->
@@ -95,6 +88,12 @@
             <div>
               Current: <span id="interestRateLabel">3.7</span>%
             </div>
+          </div>
+
+          <!-- Housing Value (For Max Loan Calculation or Down Payment Logic) -->
+          <div class="mb-3">
+            <label for="housingValue" class="form-label">Apartment Price or Value (€)</label>
+            <input type="number" class="form-control" id="housingValue" value="250000"/>
           </div>
 
           <!-- Inflation Rate -->
@@ -133,7 +132,45 @@
             </div>
           </div>
 
-          <button class="btn btn-primary w-100" onclick="updateSimulation()">Simulate</button>
+          <button class="btn btn-primary w-100 mb-3" onclick="updateSimulation()">Simulate Credit</button>
+
+          <!-- Max Loan Based on 37% Ratio -->
+          <p class="small text-muted">
+            Based on your monthly income & 37% limit, the maximum loan you can afford is: 
+            <strong id="maxLoanPossible">€0</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Rental Parameters -->
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Rental Simulation</h5>
+          <div class="mb-3">
+            <label for="monthlyRent" class="form-label">Estimated Monthly Rent (€)</label>
+            <input type="number" class="form-control" id="monthlyRent" value="800"/>
+          </div>
+
+          <div class="mb-3">
+            <label for="monthlyExpenses" class="form-label">Monthly Expenses (Maintenance, Tax, etc.) (€)</label>
+            <input type="number" class="form-control" id="monthlyExpenses" value="150"/>
+          </div>
+
+          <div class="mb-3">
+            <label for="occupancyRate" class="form-label">Occupancy Rate (%)</label>
+            <input
+              type="range"
+              class="form-range"
+              min="0"
+              max="100"
+              step="1"
+              id="occupancyRate"
+              value="90"
+              oninput="document.getElementById('occupancyRateLabel').innerText = occupancyRate.value"
+            />
+            <div>Current: <span id="occupancyRateLabel">90</span>%</div>
+          </div>
+          <button class="btn btn-secondary w-100" onclick="updateSimulation()">Simulate Rent ROI</button>
         </div>
       </div>
     </div>
@@ -150,12 +187,18 @@
         <div class="card-body">
           <h5 class="card-title">Key Results</h5>
           <p><strong>Monthly Payment:</strong> <span id="monthlyPayment">€0</span></p>
-          <p><strong>Total Amount Paid:</strong> <span id="totalPaid">€0</span></p>
+          <p><strong>Total Amount Paid (Principal + Interest):</strong> <span id="totalPaid">€0</span></p>
           <p><strong>Total Interest Paid:</strong> <span id="totalInterest">€0</span></p>
           <p><strong>Debt Ratio:</strong> <span id="debtRatio">0</span>% (Max allowed: 37%)</p>
           <p>
-            <strong>Estimated Property Value after <span id="creditYearsLabel">15</span> years:</strong>
+            <strong>Estimated Property Value after 
+              <span id="creditYearsLabel">15</span> years:</strong>
             <span id="finalHousingValue">€0</span>
+          </p>
+          <p>
+            <strong>Inflation Factor in 
+              <span id="inflationYearsLabel">15</span> yrs:</strong>
+            <span id="inflationFactorLabel">1.00</span>x
           </p>
         </div>
       </div>
@@ -170,10 +213,30 @@
         </div>
       </div>
 
+      <!-- Rental ROI Results -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Rental ROI Analysis</h5>
+          <p>
+            <strong>Monthly Rent (Occupancy-Adjusted):</strong> 
+            €<span id="adjustedRent">0</span>
+          </p>
+          <p>
+            <strong>Monthly Net Cashflow from Rent:</strong> 
+            €<span id="rentCashflow">0</span> 
+            (<span id="rentROI">0</span>% ROI vs monthly mortgage)
+          </p>
+          <p>
+            <strong>Years to break-even on interest (approx.):</strong> 
+            <span id="breakEvenRental">-</span> years
+          </p>
+        </div>
+      </div>
+
       <!-- Recommendations -->
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title">Recommendations</h5>
+          <h5 class="card-title">Strategy Recommendations</h5>
           <ul id="recommendations"></ul>
         </div>
       </div>
@@ -186,6 +249,7 @@
 
 <script>
   let balanceChart;  // global Chart.js instance
+  const DEBT_RATIO_MAX = 0.37; // 37% debt ratio
 
   function computeCreditSimulation(principal, annualInterestRate, creditYears) {
     /**
@@ -227,7 +291,6 @@
     }
 
     const totalPaid = monthlyPayment * numberOfMonths;
-
     return {
       monthlyPayment,
       totalPaid,
@@ -298,79 +361,161 @@
     });
   }
 
+  function calculateMaxLoan(monthlyIncome, interestRate, creditYears) {
+    /**
+     * We want monthlyPayment / monthlyIncome <= 0.37
+     * monthlyPayment = principal * (r / (1 - (1 + r)^(-n)))
+     * Solve for principal given that monthlyPayment = monthlyIncome * 0.37
+     */
+    const monthlyRate = interestRate / 100 / 12;
+    const numberOfMonths = creditYears * 12;
+    const maxPayment = monthlyIncome * DEBT_RATIO_MAX;
+
+    if (monthlyRate === 0) {
+      // trivial case
+      return maxPayment * numberOfMonths;
+    }
+
+    // Rearranged formula: 
+    // principal = monthlyPayment * (1 - (1+r)^(-n)) / r
+    // principal = maxPayment * ...
+    const principal = maxPayment * (1 - Math.pow(1 + monthlyRate, -numberOfMonths)) / monthlyRate;
+    return principal;
+  }
+
   function updateSimulation() {
     // Collect inputs
     const loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
     const monthlyIncome = parseFloat(document.getElementById('monthlyIncome').value) || 0;
     const housingValue = parseFloat(document.getElementById('housingValue').value) || 0;
-    const creditYearsElem = document.getElementById('creditYears');
-    const creditYears = parseInt(creditYearsElem.value, 10);
+    const creditYears = parseInt(document.getElementById('creditYears').value, 10);
 
     const interestRate = parseFloat(document.getElementById('interestRate').value) || 3.7;
     const inflationRate = parseFloat(document.getElementById('inflationRate').value) || 2.0;
     const housingIncrease = parseFloat(document.getElementById('housingIncrease').value) || 2.0;
 
-    document.getElementById('creditYearsLabel').textContent = creditYears;
+    const monthlyRent = parseFloat(document.getElementById('monthlyRent').value) || 0;
+    const monthlyExpenses = parseFloat(document.getElementById('monthlyExpenses').value) || 0;
+    const occupancyRate = parseFloat(document.getElementById('occupancyRate').value) || 0;
 
-    // Compute loan details
+    // Update labels
+    document.getElementById('creditYearsLabel').textContent = creditYears;
+    document.getElementById('inflationYearsLabel').textContent = creditYears;
+
+    // 1) Compute loan details
     const simulation = computeCreditSimulation(loanAmount, interestRate, creditYears);
 
-    // Update DOM for key results
+    // 2) Update Key Results in DOM
     document.getElementById('monthlyPayment').textContent = '€' + simulation.monthlyPayment.toFixed(2);
     document.getElementById('totalPaid').textContent = '€' + simulation.totalPaid.toFixed(2);
     document.getElementById('totalInterest').textContent = '€' + simulation.totalInterest.toFixed(2);
 
+    // Debt ratio
     const monthlyPaymentRatio = (simulation.monthlyPayment / monthlyIncome) || 0;
     document.getElementById('debtRatio').textContent = (monthlyPaymentRatio * 100).toFixed(2);
 
-    // Check debt ratio
+    // Debt ratio alert
     const debtRatioAlert = document.getElementById('debtRatioAlert');
-    if (monthlyPaymentRatio > 0.37) {
+    if (monthlyPaymentRatio > DEBT_RATIO_MAX) {
       debtRatioAlert.classList.remove('d-none');
     } else {
       debtRatioAlert.classList.add('d-none');
     }
 
-    // Compute final housing value
-    const finalHousingValue = estimateHousingValue(housingValue, housingIncrease, creditYears);
-    document.getElementById('finalHousingValue').textContent = '€' + finalHousingValue.toFixed(2);
+    // 3) Housing & Inflation
+    const finalValue = estimateHousingValue(housingValue, housingIncrease, creditYears);
+    document.getElementById('finalHousingValue').textContent = '€' + finalValue.toFixed(2);
 
-    // Prepare data for chart update (no destroy/re-create)
+    const inflationFactor = computeInflationFactor(inflationRate, creditYears);
+    document.getElementById('inflationFactorLabel').textContent = inflationFactor.toFixed(2);
+
+    // 4) Update Chart Data
     const months = simulation.timelineData.map((t) => t.month);
     const remainingBalance = simulation.timelineData.map((t) => t.remainingBalance);
     const monthlyInterest = simulation.timelineData.map((t) => t.paidInterest);
 
-    // Update chart data
     balanceChart.data.labels = months;
     balanceChart.data.datasets[0].data = remainingBalance;
     balanceChart.data.datasets[1].data = monthlyInterest;
     balanceChart.update();
 
-    // Generate recommendations
+    // 5) Rental ROI Computation
+    // Occupancy-adjusted rent
+    const rentIncome = (monthlyRent * (occupancyRate / 100));
+    document.getElementById('adjustedRent').textContent = rentIncome.toFixed(2);
+
+    // Net monthly cashflow from renting
+    const netRentCashflow = rentIncome - monthlyExpenses - simulation.monthlyPayment;
+    document.getElementById('rentCashflow').textContent = netRentCashflow.toFixed(2);
+    // Basic ROI = (Net monthly profit / monthly Payment) * 100
+    // This is naive but gives an idea
+    let rentROI = 0;
+    if (simulation.monthlyPayment !== 0) {
+      rentROI = (netRentCashflow / simulation.monthlyPayment) * 100;
+    }
+    document.getElementById('rentROI').textContent = rentROI.toFixed(2);
+
+    // Approx. break-even in years: total interest / net rent cashflow (assuming positive)
+    let breakEvenYears = '-';
+    if (netRentCashflow > 0) {
+      breakEvenYears = (simulation.totalInterest / (netRentCashflow * 12)).toFixed(2);
+    }
+    document.getElementById('breakEvenRental').textContent = breakEvenYears;
+
+    // 6) Calculate max loan possible with 37% ratio
+    const maxLoan = calculateMaxLoan(monthlyIncome, interestRate, creditYears);
+    document.getElementById('maxLoanPossible').textContent = '€' + maxLoan.toFixed(0);
+
+    // 7) Build recommendations
     const recommendationList = [];
-    if (monthlyPaymentRatio > 0.37) {
+
+    // Debt ratio check
+    if (monthlyPaymentRatio > DEBT_RATIO_MAX) {
       recommendationList.push(
-        `Your monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is over 37% of your income. Consider reducing the loan amount or extending the credit term.`
+        `Your monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is over 37% of your net income. 
+         Consider reducing the loan amount or extending the credit term for better negotiation.`
       );
     } else {
       recommendationList.push(
-        `Monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is within the 37% debt ratio.`
+        `Monthly payment (€${simulation.monthlyPayment.toFixed(2)}) is within the 37% ratio limit.`
       );
     }
 
+    // Interest total
     recommendationList.push(
-      `Total interest over ${creditYears} years: €${simulation.totalInterest.toFixed(2)}.`
+      `Total interest over ${creditYears} years: €${simulation.totalInterest.toFixed(2)}. 
+       Try negotiating a lower interest rate to reduce total interest paid.`
     );
 
-    const netAppreciation = finalHousingValue - housingValue;
+    // Value appreciation
+    const netAppreciation = finalValue - housingValue;
     recommendationList.push(
-      `Estimated apartment value after ${creditYears} years: €${finalHousingValue.toFixed(2)} (a change of €${netAppreciation.toFixed(2)}).`
+      `Estimated apartment value after ${creditYears} years: €${finalValue.toFixed(2)} 
+       (a gain of €${netAppreciation.toFixed(2)} vs. today's price, assuming ${housingIncrease}% annual growth).`
     );
 
-    const inflationFactor = computeInflationFactor(inflationRate, creditYears);
     recommendationList.push(
-      `Inflation factor over ${creditYears} years at ${inflationRate}%: ~${inflationFactor.toFixed(2)}x.`
+      `Inflation factor ~${inflationFactor.toFixed(2)}x in ${creditYears} years. 
+       Money may lose purchasing power, so locking a low interest rate could be beneficial.`
     );
+
+    // Rent recommendations
+    if (netRentCashflow < 0) {
+      recommendationList.push(`Your net monthly rent cashflow is negative (€${netRentCashflow.toFixed(2)}). 
+        You may want to increase rent or reduce expenses to make renting profitable.`);
+    } else {
+      recommendationList.push(`Your monthly rent scenario yields a net of €${netRentCashflow.toFixed(2)}. 
+        Rental ROI vs mortgage is ${rentROI.toFixed(2)}%. 
+        Break-even on interest in ~${breakEvenYears} years.`);
+    }
+
+    if (maxLoan < housingValue) {
+      recommendationList.push(`Your max affordable loan (~€${maxLoan.toFixed(2)}) is less than 
+        the apartment price (€${housingValue}). You need a bigger down payment or additional financing.`);
+    } else {
+      recommendationList.push(`You can likely afford this apartment with the current 37% ratio. 
+        The maximum you could borrow at these terms is about €${maxLoan.toFixed(2)}.`);
+    }
 
     // Update recommendations DOM
     const recElem = document.getElementById('recommendations');
@@ -388,7 +533,7 @@
     // Perform the first simulation run
     updateSimulation();
 
-    // Add event listeners for all inputs to refresh the chart smoothly
+    // Add event listeners for all inputs to refresh the chart & ROI in real time
     const inputIds = [
       "loanAmount",
       "monthlyIncome",
@@ -396,7 +541,10 @@
       "creditYears",
       "interestRate",
       "inflationRate",
-      "housingIncrease"
+      "housingIncrease",
+      "monthlyRent",
+      "monthlyExpenses",
+      "occupancyRate"
     ];
 
     inputIds.forEach((id) => {
