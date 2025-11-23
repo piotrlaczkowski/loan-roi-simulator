@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, TrendingUp, Wallet, Home, Zap, Layers, Briefcase, BarChart3, Settings, Bot, Info, AlertTriangle } from 'lucide-react';
+import { Calculator, TrendingUp, Wallet, Home, Zap, Layers, Briefcase, BarChart3, Settings, Bot, Info, AlertTriangle, MessageCircle, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { InputGroup } from './InputGroup';
 import { ResultsCard } from './ResultsCard';
 import { Charts } from './Charts';
 import { SettingsModal } from './SettingsModal';
+import { Chatbot } from './Chatbot';
 import type { LoanInputs, SimulationResult, MultiScenarioResult, PortfolioInputs, PortfolioResult, StrategyResult } from '../types';
 import {
     calculateSimulation,
@@ -15,7 +16,7 @@ import {
     calculateMultiScenarios,
     calculatePortfolio
 } from '../utils/calculations';
-import { generateAIAnalysis } from '../services/gemini';
+import { generateAIAnalysis, generateDetailedBreakdown, chatWithGemini, type ChatMessage } from '../services/gemini';
 
 const INITIAL_LOAN_STATE: LoanInputs = {
     propertyPrice: 250000,
@@ -62,12 +63,17 @@ export const Dashboard: React.FC = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [aiAnalysis, setAiAnalysis] = useState<string>('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [detailedBreakdown, setDetailedBreakdown] = useState<string>('');
+    const [isBreakdownLoading, setIsBreakdownLoading] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
     useEffect(() => {
         const res = calculateSimulation(inputs);
         setResult(res);
         setRecommendations(getRecommendations(inputs, res));
         setAiAnalysis('');
+        setDetailedBreakdown('');
 
         if (activeTab === 'strategy') {
             setStrategies(findStrategies(inputs));
@@ -103,6 +109,38 @@ export const Dashboard: React.FC = () => {
         const analysis = await generateAIAnalysis(apiKey, inputs, result);
         setAiAnalysis(analysis);
         setIsAnalyzing(false);
+    };
+
+    const handleDetailedBreakdown = async () => {
+        if (!result) return;
+        const apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            setIsSettingsOpen(true);
+            return;
+        }
+
+        setIsBreakdownLoading(true);
+        const breakdown = await generateDetailedBreakdown(apiKey, inputs, result, multiResults, strategies);
+        setDetailedBreakdown(breakdown);
+        setIsBreakdownLoading(false);
+    };
+
+    const handleChatMessage = async (message: string): Promise<string> => {
+        const apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            setIsSettingsOpen(true);
+            return "Please configure your Gemini API key in settings.";
+        }
+
+        const newMessages = [...chatMessages, { role: 'user' as const, content: message }];
+        setChatMessages(newMessages);
+
+        const response = await chatWithGemini(apiKey, newMessages, inputs, result!, multiResults, strategies);
+
+        const updatedMessages = [...newMessages, { role: 'assistant' as const, content: response }];
+        setChatMessages(updatedMessages);
+
+        return response;
     };
 
     if (!result) return null;
@@ -172,12 +210,14 @@ export const Dashboard: React.FC = () => {
                                     value={inputs.propertyPrice}
                                     onChange={(v) => updateInput('propertyPrice', v)}
                                     prefix="€"
+                                    tooltip="The total purchase price of the property you want to buy. This is the market value before any fees or down payment."
                                 />
                                 <InputGroup
                                     label="Down Payment"
                                     value={inputs.manualDownPayment}
                                     onChange={(v) => updateInput('manualDownPayment', v)}
                                     prefix="€"
+                                    tooltip="The amount of money you pay upfront. A larger down payment reduces your loan amount and monthly payments. Typically 10-20% of the property price."
                                 />
                                 <div className="row">
                                     <div className="col-6">
@@ -202,6 +242,7 @@ export const Dashboard: React.FC = () => {
                                             onChange={(v) => updateInput('interestRateSingle', v)}
                                             step={0.1}
                                             suffix="%"
+                                            tooltip="The annual interest rate on your mortgage loan. This is the cost of borrowing money from the bank. Lower rates mean less interest paid over time."
                                         />
                                     </div>
                                 </div>
@@ -210,12 +251,14 @@ export const Dashboard: React.FC = () => {
                                     value={inputs.notaryFeesRate}
                                     onChange={(v) => updateInput('notaryFeesRate', v)}
                                     type="range" min={0} max={15} step={0.5} prefix="" suffix="%"
+                                    tooltip="Legal and administrative fees for the property purchase, typically 7-8% in France. This includes registration, notary services, and taxes."
                                 />
                                 <InputGroup
                                     label="Insurance Rate"
                                     value={inputs.insuranceYearlyRate}
                                     onChange={(v) => updateInput('insuranceYearlyRate', v)}
                                     type="range" min={0} max={2} step={0.05} prefix="" suffix="%"
+                                    tooltip="Annual mortgage insurance rate (as % of loan amount). This protects the lender if you can't repay. Typically 0.3-0.5% per year."
                                 />
                             </div>
                         </div>
@@ -228,6 +271,7 @@ export const Dashboard: React.FC = () => {
                                     value={inputs.monthlyIncome}
                                     onChange={(v) => updateInput('monthlyIncome', v)}
                                     prefix="€"
+                                    tooltip="Your total monthly income after taxes. Banks use this to calculate your debt ratio (max 37%). Higher income allows for larger loan payments."
                                 />
                                 <InputGroup
                                     label="Payment Overdrive"
@@ -235,6 +279,7 @@ export const Dashboard: React.FC = () => {
                                     onChange={(v) => updateInput('paymentOverdrive', v)}
                                     type="range" min={0} max={100} step={5} prefix="" suffix="%"
                                     helperText="Increase monthly payment by %"
+                                    tooltip="Increase your monthly payment by this percentage to pay off the loan faster. For example, 10% means paying 10% more each month, which reduces total interest."
                                 />
                                 <InputGroup
                                     label="Income Injection"
@@ -242,6 +287,7 @@ export const Dashboard: React.FC = () => {
                                     onChange={(v) => updateInput('incomeInjection', v)}
                                     type="range" min={0} max={50} step={5} prefix="" suffix="%"
                                     helperText="% of income added to payment"
+                                    tooltip="Add a percentage of your monthly income directly to the loan payment. This accelerates payoff and saves on interest. Use the Turbo Strategy tab for optimal combinations."
                                 />
                             </div>
                         </div>
@@ -256,6 +302,7 @@ export const Dashboard: React.FC = () => {
                                             value={inputs.monthlyRent}
                                             onChange={(v) => updateInput('monthlyRent', v)}
                                             prefix="€"
+                                            tooltip="Expected monthly rent if you rent out this property. Research similar properties in the area to estimate. This income offsets your mortgage payment."
                                         />
                                     </div>
                                     <div className="col-6">
@@ -264,6 +311,7 @@ export const Dashboard: React.FC = () => {
                                             value={inputs.monthlyExpenses}
                                             onChange={(v) => updateInput('monthlyExpenses', v)}
                                             prefix="€"
+                                            tooltip="Monthly costs for maintaining the rental property: repairs, maintenance, HOA fees, utilities (if you pay them), property management fees, etc."
                                         />
                                     </div>
                                 </div>
@@ -273,12 +321,14 @@ export const Dashboard: React.FC = () => {
                                     onChange={(v) => updateInput('propertyTax', v)}
                                     prefix="€"
                                     helperText="Monthly"
+                                    tooltip="Monthly property tax (taxe foncière). In France, this is typically paid annually but shown here as monthly for easier budgeting. Check your local tax office for exact amount."
                                 />
                                 <InputGroup
                                     label="Occupancy Rate"
                                     value={inputs.occupancyRate}
                                     onChange={(v) => updateInput('occupancyRate', v)}
                                     type="range" min={50} max={100} step={5} prefix="" suffix="%"
+                                    tooltip="Percentage of time the property is rented out. 100% means always occupied. Account for vacancy periods, tenant turnover, and seasonal variations. 90-95% is realistic for good locations."
                                 />
                                 <div className="row mt-2">
                                     <div className="col-6">
@@ -288,6 +338,7 @@ export const Dashboard: React.FC = () => {
                                             onChange={(v) => updateInput('rentIndexationRate', v)}
                                             suffix="%" step={0.1}
                                             helperText="Annual Increase"
+                                            tooltip="Annual rent increase rate. In France, rent increases are typically capped by law (IRL index). Check current regulations. Usually 1-3% per year."
                                         />
                                     </div>
                                     <div className="col-6">
@@ -297,6 +348,7 @@ export const Dashboard: React.FC = () => {
                                             onChange={(v) => updateInput('propertyAppreciationRate', v)}
                                             suffix="%" step={0.1}
                                             helperText="Annual Value Gain"
+                                            tooltip="Expected annual increase in property value. Historical average in France is 2-4% per year, but varies by location. This builds equity over time even if cashflow is negative."
                                         />
                                     </div>
                                 </div>
@@ -402,6 +454,34 @@ export const Dashboard: React.FC = () => {
                                 ) : (
                                     <p className="text-muted text-sm">
                                         Click "Analyze Scenario" to get a professional assessment of this investment from Gemini AI.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Detailed Breakdown */}
+                        <div className="card mb-4 border-purple-500/30 bg-purple-900/10">
+                            <div className="card-body">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h5 className="section-header mb-0 border-0 text-purple-400">
+                                        <FileText size={20} /> Detailed Financial Breakdown
+                                    </h5>
+                                    <button
+                                        onClick={handleDetailedBreakdown}
+                                        disabled={isBreakdownLoading}
+                                        className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-50 transition-colors"
+                                    >
+                                        {isBreakdownLoading ? 'Analyzing...' : 'Get Detailed Breakdown'}
+                                    </button>
+                                </div>
+
+                                {detailedBreakdown ? (
+                                    <div className="prose prose-invert max-w-none text-sm text-slate-300">
+                                        <ReactMarkdown>{detailedBreakdown}</ReactMarkdown>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted text-sm">
+                                        Click "Get Detailed Breakdown" to understand why you see negative cashflow, when you'll break even, and what the numbers really mean.
                                     </p>
                                 )}
                             </div>
@@ -678,6 +758,24 @@ export const Dashboard: React.FC = () => {
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Chatbot */}
+            <Chatbot
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                onSendMessage={handleChatMessage}
+            />
+
+            {/* Floating Chat Button */}
+            {!isChatOpen && (
+                <button
+                    onClick={() => setIsChatOpen(true)}
+                    className="floating-chat-button"
+                    title="Ask AI Assistant"
+                >
+                    <MessageCircle size={28} />
+                </button>
             )}
         </div>
     );

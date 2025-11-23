@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { HelpCircle } from 'lucide-react';
 
 interface InputGroupProps {
     label: string;
@@ -11,6 +12,7 @@ interface InputGroupProps {
     prefix?: string;
     suffix?: string;
     helperText?: string;
+    tooltip?: string;
     className?: string;
 }
 
@@ -25,12 +27,40 @@ export const InputGroup: React.FC<InputGroupProps> = ({
     prefix,
     suffix,
     helperText,
+    tooltip,
     className = "mb-3"
 }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
+
     return (
         <div className={className}>
-            <label className="form-label d-flex justify-between">
-                <span>{label}</span>
+            <label className="form-label d-flex justify-between items-center">
+                <span className="flex items-center gap-2">
+                    {label}
+                    {tooltip && (
+                        <div className="relative inline-block">
+                            <button
+                                type="button"
+                                className="tooltip-trigger"
+                                onMouseEnter={() => setShowTooltip(true)}
+                                onMouseLeave={() => setShowTooltip(false)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setShowTooltip(!showTooltip);
+                                }}
+                                aria-label="Help"
+                            >
+                                <HelpCircle size={16} />
+                            </button>
+                            {showTooltip && (
+                                <div className="tooltip-popup">
+                                    {tooltip}
+                                    <div className="tooltip-arrow"></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </span>
                 {type === 'range' && (
                     <span className="text-primary font-bold">
                         {prefix}{value}{suffix}
