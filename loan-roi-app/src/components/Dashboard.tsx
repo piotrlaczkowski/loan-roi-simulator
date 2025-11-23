@@ -5,7 +5,7 @@ import { InputGroup } from './InputGroup';
 import { ResultsCard } from './ResultsCard';
 import { Charts } from './Charts';
 import { SettingsModal } from './SettingsModal';
-import type { LoanInputs, SimulationResult, MultiScenarioResult, PortfolioInputs, PortfolioResult } from '../types';
+import type { LoanInputs, SimulationResult, MultiScenarioResult, PortfolioInputs, PortfolioResult, StrategyResult } from '../types';
 import {
     calculateSimulation,
     kFormat,
@@ -56,7 +56,7 @@ export const Dashboard: React.FC = () => {
     const [multiResults, setMultiResults] = useState<MultiScenarioResult[]>([]);
     const [portfolioResult, setPortfolioResult] = useState<PortfolioResult | null>(null);
     const [recommendations, setRecommendations] = useState<string[]>([]);
-    const [strategies, setStrategies] = useState<any[]>([]);
+    const [strategies, setStrategies] = useState<StrategyResult[]>([]);
 
     const [activeTab, setActiveTab] = useState<'single' | 'multi' | 'strategy' | 'portfolio'>('single');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -67,7 +67,7 @@ export const Dashboard: React.FC = () => {
         const res = calculateSimulation(inputs);
         setResult(res);
         setRecommendations(getRecommendations(inputs, res));
-        setAiAnalysis(''); // Reset AI analysis on input change
+        setAiAnalysis('');
 
         if (activeTab === 'strategy') {
             setStrategies(findStrategies(inputs));
@@ -480,6 +480,12 @@ export const Dashboard: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    <div className="mt-2 pt-2 border-t border-gray-700">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-muted">Equity @ 10y</span>
+                                            <span className="text-success font-bold">{kFormat(res.equityAt10Years)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -495,7 +501,7 @@ export const Dashboard: React.FC = () => {
                             <div className="card-body">
                                 <h3 className="mb-2">Turbo Payoff Strategies</h3>
                                 <p className="text-muted">
-                                    Fastest ways to pay off your loan while staying under the 37% debt ratio.
+                                    We analyzed thousands of combinations to find the best strategies for you.
                                 </p>
                             </div>
                         </div>
@@ -512,21 +518,33 @@ export const Dashboard: React.FC = () => {
                             <div key={idx} className="col-4">
                                 <div className="card h-100 border-success" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
                                     <div className="card-body">
-                                        <h5 className="text-success flex items-center gap-2 mb-3">
-                                            <Zap size={20} /> Turbo Option {idx + 1}
+                                        <h5 className="text-success flex items-center gap-2 mb-2">
+                                            <Zap size={20} /> {strat.name}
                                         </h5>
-                                        <div className="mb-2">
-                                            <strong>Overdrive:</strong> {strat.overdrive}%
+                                        <p className="text-xs text-muted mb-4 h-8">{strat.description}</p>
+
+                                        <div className="flex justify-between mb-2 text-sm">
+                                            <span className="text-muted">Overdrive</span>
+                                            <span className="font-bold">{strat.overdrive}%</span>
                                         </div>
-                                        <div className="mb-2">
-                                            <strong>Injection:</strong> {strat.injection}% of Income
+                                        <div className="flex justify-between mb-2 text-sm">
+                                            <span className="text-muted">Injection</span>
+                                            <span className="font-bold">{strat.injection}%</span>
                                         </div>
+
                                         <hr className="border-gray-700 my-3" />
-                                        <div className="mb-2">
-                                            <strong>Payoff:</strong> {(strat.monthsCount / 12).toFixed(1)} years
+
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-muted">Payoff Time</span>
+                                            <span className="font-bold text-primary">{(strat.monthsCount / 12).toFixed(1)} years</span>
                                         </div>
-                                        <div className="mb-2">
-                                            <strong>Cashflow:</strong> {kFormat(strat.netRentCashflow)}
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-muted">Interest Saved</span>
+                                            <span className="font-bold text-success">{kFormat(strat.interestSaved)}</span>
+                                        </div>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="text-muted">Monthly Pay</span>
+                                            <span className="font-bold">{kFormat(strat.monthlyPayment)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -648,21 +666,9 @@ export const Dashboard: React.FC = () => {
                                 <div className="card">
                                     <div className="card-body">
                                         <h5 className="section-header">
-                                            <TrendingUp size={20} /> 10-Year Net Worth Projection
+                                            <TrendingUp size={20} /> 20-Year Net Worth Projection
                                         </h5>
-                                        {/* Simple bar chart for now, could be enhanced */}
-                                        <div className="h-64 flex items-end gap-2 justify-between px-4">
-                                            {portfolioResult.netWorthProjection.map((p) => (
-                                                <div key={p.year} className="flex flex-col items-center flex-1">
-                                                    <div className="w-full bg-primary/20 rounded-t relative group" style={{ height: `${(p.equity / (portfolioResult.netWorthProjection[10].equity * 1.1)) * 100}%`, minHeight: '4px', backgroundColor: 'rgba(59, 130, 246, 0.5)' }}>
-                                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 pointer-events-none">
-                                                            {kFormat(p.equity)}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-muted mt-1">{p.year}</div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <Charts data={portfolioResult.netWorthProjection} type="portfolio" />
                                         <p className="text-muted text-sm mt-3 text-center">
                                             Projection assumes 2% annual property appreciation and linear principal paydown.
                                         </p>

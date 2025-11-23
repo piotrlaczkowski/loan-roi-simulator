@@ -12,9 +12,8 @@ export interface LoanInputs {
     monthlyRent: number;
     monthlyExpenses: number;
     occupancyRate: number;
-    // New:
-    rentIndexationRate: number; // Annual rent increase %
-    propertyAppreciationRate: number; // Annual property value increase %
+    rentIndexationRate: number;
+    propertyAppreciationRate: number;
 }
 
 export interface PortfolioInputs {
@@ -38,24 +37,23 @@ export interface SimulationResult {
     debtRatio: number;
     timeline: TimelinePoint[];
 
-    // Monthly Snapshot (Year 1)
     rentIncome: number;
-    netRentCashflow: number; // Cash in pocket
-    monthlyPrincipalPaid: number; // Equity built (avg year 1)
-    monthlyAppreciation: number; // Value gain (avg year 1)
-    totalMonthlyEconomicGain: number; // Cashflow + Principal + Appreciation
+    netRentCashflow: number;
+    monthlyPrincipalPaid: number;
+    monthlyAppreciation: number;
+    totalMonthlyEconomicGain: number;
 
-    rentROI: number; // Cash-on-Cash ROI
-    totalROI: number; // (Economic Gain * 12) / Total Invested
+    rentROI: number;
+    totalROI: number;
 
-    breakEvenYears: number | string; // Cashflow break-even (if negative starts)
-    equityBreakEvenYears: number | string; // When Net Worth > Total Cash Put In
+    breakEvenYears: number | string;
+    equityBreakEvenYears: number | string;
 
     maxLoan: number;
     finalPropertyValue: number;
     notaryFees: number;
     monthlyInsurance: number;
-    totalCashInvested: number; // Down payment + Notary
+    totalCashInvested: number;
 }
 
 export interface TimelinePoint {
@@ -64,24 +62,26 @@ export interface TimelinePoint {
     remainingBalance: number;
     paidInterest: number;
     paidPrincipal: number;
-
     propertyValue: number;
-    equity: number; // Value - Debt
-
+    equity: number;
     monthlyCashflow: number;
-    cumulativeCashflow: number; // Sum of all monthly cashflows (usually negative if subsidizing)
-
-    totalCashInvestedSoFar: number; // Initial + Cumulative Negative Cashflow
-
-    netResult: number; // Equity - TotalCashInvestedSoFar
+    cumulativeCashflow: number;
+    totalCashInvestedSoFar: number;
+    netResult: number;
 }
 
 export interface StrategyResult {
+    name: string;
+    description: string;
     overdrive: number;
     injection: number;
+    monthlyPayment: number;
     monthsCount: number;
     totalInterest: number;
+    interestSaved: number;
+    yearsSaved: number;
     netRentCashflow: number;
+    debtRatio: number;
 }
 
 export interface MultiScenarioResult {
@@ -92,6 +92,7 @@ export interface MultiScenarioResult {
     ratio: number;
     cashflow: number;
     isViable: boolean;
+    equityAt10Years: number;
 }
 
 export interface PortfolioResult {
@@ -99,5 +100,12 @@ export interface PortfolioResult {
     totalExpenses: number;
     netCashflow: number;
     bankDebtRatio: number;
-    netWorthProjection: { year: number; equity: number; debt: number }[];
+    netWorthProjection: PortfolioTimelinePoint[];
+}
+
+export interface PortfolioTimelinePoint {
+    year: number;
+    equity: number;
+    debt: number;
+    assets: number;
 }

@@ -5,7 +5,8 @@ import type {
     StrategyResult,
     MultiScenarioResult,
     PortfolioInputs,
-    PortfolioResult
+    PortfolioResult,
+    PortfolioTimelinePoint
 } from '../types';
 
 export const DEBT_RATIO_MAX = 0.37;
@@ -63,10 +64,7 @@ export const calculateSimulation = (inputs: LoanInputs): SimulationResult => {
         totalInterest += interestThisMonth;
 
         let principalPaid = (monthlyPaymentPIOverdrive + monthlyIncomeInjection) - interestThisMonth;
-        // If standard payment covers more than interest, good. If not (negative amortization), handle it? 
-        // Standard French loans don't usually allow negative amortization, so principalPaid >= 0.
         if (principalPaid < 0) principalPaid = 0;
-        // Cap principal at remaining balance
         if (principalPaid > remainingBalance) principalPaid = remainingBalance;
 
         remainingBalance -= principalPaid;
@@ -81,17 +79,12 @@ export const calculateSimulation = (inputs: LoanInputs): SimulationResult => {
         currentPropertyValue *= (1 + monthlyAppreciationRate);
 
         // 4. Cashflow
-        // Cashflow = Rent - Expenses - Mortgage Payment
-        // Expenses also likely increase with inflation, but let's keep it simple or index them too?
-        // Let's assume expenses index same as rent for simplicity
+        // Expenses indexation
         const currentExpenses = inputs.monthlyExpenses * (currentRent / (inputs.monthlyRent * (inputs.occupancyRate / 100) || 1));
 
         const monthlyCashflow = currentRent - currentExpenses - finalMonthlyPayment;
 
         // 5. Total Cash Invested Logic
-        // If cashflow is negative, you pour money in. If positive, you get money back (reducing net invested).
-        // However, "Break Even" usually means "When do I have more Equity than I put in?"
-        // So we subtract positive cashflow from invested, add negative cashflow to invested.
         totalCashInvestedSoFar -= monthlyCashflow;
 
         // 6. Equity
@@ -113,12 +106,12 @@ export const calculateSimulation = (inputs: LoanInputs): SimulationResult => {
             propertyValue: currentPropertyValue,
             equity,
             monthlyCashflow,
-            cumulativeCashflow: -totalCashInvestedSoFar + initialCashInvested, // Just the cashflow part
+            cumulativeCashflow: -totalCashInvestedSoFar + initialCashInvested,
             totalCashInvestedSoFar,
             netResult
         });
 
-        if (remainingBalance <= 0.1) break; // Floating point tolerance
+        if (remainingBalance <= 0.1) break;
     }
 
     const totalInsurance = monthlyInsurance * monthsCount;
@@ -130,20 +123,15 @@ export const calculateSimulation = (inputs: LoanInputs): SimulationResult => {
 
     // Snapshot Metrics (Year 1 Average)
     const firstYearPoints = timeline.slice(0, 12);
-    const avgMonthlyPrincipal = firstYearPoints.reduce((sum, p) => sum + p.paidPrincipal, 0) / firstYearPoints.length;
-    const avgMonthlyAppreciation = (timeline[11]?.propertyValue - inputs.propertyPrice) / 12 || 0;
+    const avgMonthlyPrincipal = firstYearPoints.length > 0 ? firstYearPoints.reduce((sum, p) => sum + p.paidPrincipal, 0) / firstYearPoints.length : 0;
+    const avgMonthlyAppreciation = (timeline[Math.min(11, timeline.length - 1)]?.propertyValue - inputs.propertyPrice) / 12 || 0;
     const initialNetRentCashflow = (inputs.monthlyRent * (inputs.occupancyRate / 100)) - inputs.monthlyExpenses - finalMonthlyPayment;
 
-    // Total Economic Gain = Cashflow + Principal + Appreciation
     const totalMonthlyEconomicGain = initialNetRentCashflow + avgMonthlyPrincipal + avgMonthlyAppreciation;
 
-    // ROI Calculations
     const rentROI = finalMonthlyPayment > 0 ? (initialNetRentCashflow / finalMonthlyPayment) * 100 : 0;
-
-    // Total ROI (Annualized based on Year 1 Economic Gain vs Initial Cash)
     const totalROI = initialCashInvested > 0 ? ((totalMonthlyEconomicGain * 12) / initialCashInvested) * 100 : 0;
 
-    // Break Evens
     let cashflowBreakEvenMonth = timeline.findIndex(p => p.monthlyCashflow >= 0);
     const cashflowBreakEvenYears = cashflowBreakEvenMonth >= 0 ? (cashflowBreakEvenMonth / 12).toFixed(1) : 'Never';
 
@@ -203,10 +191,37 @@ export const calcMaxLoan = (inp: LoanInputs): number => {
 
 export const findStrategies = (inp: LoanInputs): StrategyResult[] => {
     const borrowedPrincipal = Math.max(inp.propertyPrice - inp.manualDownPayment, 0);
-    const combos: StrategyResult[] = [];
 
-    for (let od = 0; od <= 100; od += 10) {
-        for (let inj = 0; inj <= 50; inj += 5) {
+    // Calculate Baseline for comparison
+    const baseMonthlyPI = computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, inp.creditYears);
+    // const baseMonthlyInsurance = borrowedPrincipal * (inp.insuranceYearlyRate / 100) / 12;
+    // const baseMonthlyPayment = baseMonthlyPI + baseMonthlyInsurance + inp.propertyTax;
+    const baseTotalInterest = (baseMonthlyPI * inp.creditYears * 12) - borrowedPrincipal;
+
+    // const strategies: StrategyResult[] = [];
+
+    // 1. Max Speed Strategy (Max out Debt Ratio)
+    // Find max payment allowed
+    // const maxPayment = inp.monthlyIncome * DEBT_RATIO_MAX;
+
+    // We want to find Overdrive (OD) and Injection (INJ) that maximizes payment <= maxPayment
+    // Priority: Use Injection first (direct principal reduction usually), then Overdrive? 
+    // Actually, Overdrive increases P+I, Injection adds to P. 
+    // Let's try to find the combination that results in highest payment <= maxPayment
+
+    let bestMaxSpeed: StrategyResult | null = null;
+
+    // 2. Cashflow Neutral Strategy (if possible)
+    // Find payment that makes NetRentCashflow >= 0
+    // const targetPaymentForNeutral = (inp.monthlyRent * (inp.occupancyRate / 100)) - inp.monthlyExpenses;
+    let bestNeutral: StrategyResult | null = null;
+
+    // 3. Balanced Strategy (Moderate increase)
+    let bestBalanced: StrategyResult | null = null;
+
+    // Iterate through reasonable steps
+    for (let od = 0; od <= 100; od += 5) {
+        for (let inj = 0; inj <= 40; inj += 2) {
             const monthlyPaymentPI = computeMonthlyPayment(borrowedPrincipal, inp.interestRateSingle, inp.creditYears);
             const monthlyPaymentPIOverdrive = monthlyPaymentPI * (1 + od / 100);
             const monthlyInsurance = borrowedPrincipal * (inp.insuranceYearlyRate / 100) / 12;
@@ -215,8 +230,8 @@ export const findStrategies = (inp: LoanInputs): StrategyResult[] => {
 
             const ratio = (inp.monthlyIncome > 0) ? (finalMonthlyPayment / inp.monthlyIncome) : 0;
 
-            if (ratio <= DEBT_RATIO_MAX) {
-                // Quick sim
+            if (ratio <= DEBT_RATIO_MAX + 0.001) { // Tolerance
+                // Run quick sim
                 let monthsCount = 0;
                 let remainingBalance = borrowedPrincipal;
                 let totalInterest = 0;
@@ -230,22 +245,59 @@ export const findStrategies = (inp: LoanInputs): StrategyResult[] => {
                     remainingBalance -= principalPaid;
                 }
 
-                const rentIncome = inp.monthlyRent * (inp.occupancyRate / 100);
-                const netRentCashflow = rentIncome - inp.monthlyExpenses - finalMonthlyPayment;
+                const netRentCashflow = (inp.monthlyRent * (inp.occupancyRate / 100)) - inp.monthlyExpenses - finalMonthlyPayment;
+                const interestSaved = baseTotalInterest - totalInterest;
+                const yearsSaved = inp.creditYears - (monthsCount / 12);
 
-                combos.push({
+                const result: StrategyResult = {
+                    name: "",
+                    description: "",
                     overdrive: od,
                     injection: inj,
+                    monthlyPayment: finalMonthlyPayment,
                     monthsCount,
                     totalInterest,
-                    netRentCashflow
-                });
+                    interestSaved: interestSaved > 0 ? interestSaved : 0,
+                    yearsSaved: yearsSaved > 0 ? yearsSaved : 0,
+                    netRentCashflow,
+                    debtRatio: ratio
+                };
+
+                // Check Max Speed (Highest Payment)
+                if (!bestMaxSpeed || finalMonthlyPayment > bestMaxSpeed.monthlyPayment) {
+                    bestMaxSpeed = { ...result, name: "Max Speed", description: "Fastest payoff by maximizing your debt capacity." };
+                }
+
+                // Check Neutral (Closest to 0 cashflow without going negative, or least negative)
+                if (netRentCashflow >= 0) {
+                    // If we have multiple positive cashflows, pick the one that pays off fastest? 
+                    // Or the one with least effort? Let's pick the one with highest payoff speed that is still positive.
+                    if (!bestNeutral || monthsCount < bestNeutral.monthsCount) {
+                        bestNeutral = { ...result, name: "Cashflow Positive", description: "Optimized for positive cashflow while paying off as fast as possible." };
+                    }
+                }
+
+                // Check Balanced (Around 15-20% overdrive/injection combined, or middle ground)
+                // Let's define balanced as: saves at least 5 years, debt ratio < 33%
+                if (yearsSaved >= 5 && ratio < 0.33) {
+                    // Pick the one with max savings in this category
+                    if (!bestBalanced || interestSaved > bestBalanced.interestSaved) {
+                        bestBalanced = { ...result, name: "Balanced Approach", description: "Good compromise between monthly budget and interest savings." };
+                    }
+                }
             }
         }
     }
 
-    combos.sort((a, b) => a.monthsCount - b.monthsCount);
-    return combos.slice(0, 3);
+    const results = [];
+    if (bestMaxSpeed) results.push(bestMaxSpeed);
+    if (bestBalanced && bestBalanced.overdrive !== bestMaxSpeed?.overdrive) results.push(bestBalanced);
+    if (bestNeutral && bestNeutral.overdrive !== bestMaxSpeed?.overdrive && bestNeutral.overdrive !== bestBalanced?.overdrive) results.push(bestNeutral);
+
+    // Fallback if no specific strategies found (e.g. low income)
+    if (results.length === 0 && bestMaxSpeed) results.push(bestMaxSpeed);
+
+    return results;
 };
 
 export const getRecommendations = (inputs: LoanInputs, result: SimulationResult): string[] => {
@@ -291,6 +343,10 @@ export const calculateMultiScenarios = (inputs: LoanInputs): MultiScenarioResult
         let remainingBalance = borrowedPrincipal;
         const monthlyRate = inputs.interestRateSingle / 100 / 12;
 
+        // Equity calc
+        let equityAt10Years = 0;
+        let currentPropertyValue = inputs.propertyPrice;
+
         while (remainingBalance > 0 && monthsCount < 600) {
             monthsCount++;
             const interestThisMonth = remainingBalance * monthlyRate;
@@ -298,6 +354,14 @@ export const calculateMultiScenarios = (inputs: LoanInputs): MultiScenarioResult
             let principalPaid = monthlyPaymentPIOverdrive + monthlyIncomeInjection - interestThisMonth;
             if (principalPaid < 0) principalPaid = 0;
             remainingBalance -= principalPaid;
+
+            // Appreciation for equity check
+            const monthlyAppreciationRate = (inputs.propertyAppreciationRate || 0) / 100 / 12;
+            currentPropertyValue *= (1 + monthlyAppreciationRate);
+
+            if (monthsCount === 120) {
+                equityAt10Years = currentPropertyValue - remainingBalance;
+            }
         }
 
         const totalInsurance = monthsCount * monthlyInsurance;
@@ -315,7 +379,8 @@ export const calculateMultiScenarios = (inputs: LoanInputs): MultiScenarioResult
             totalPaid,
             ratio,
             cashflow: netRentCashflow,
-            isViable: ratio <= DEBT_RATIO_MAX
+            isViable: ratio <= DEBT_RATIO_MAX,
+            equityAt10Years
         };
     });
 };
@@ -336,17 +401,28 @@ export const calculatePortfolio = (inp: PortfolioInputs): PortfolioResult => {
     const totalOut = inp.currentHomeMortgage + invMonthlyTotal + inp.newLivingRent;
     const netCashflow = totalIn - totalOut;
 
-    const netWorthProjection = [];
+    const netWorthProjection: PortfolioTimelinePoint[] = [];
     let valA = inp.currentHomeValue;
     let valB = inp.invPrice;
     let debtB = invPrincipal;
 
-    for (let y = 0; y <= 10; y++) {
+    // Assume Debt A reduces linearly or just stays (worst case) if we don't have duration. 
+    // Let's assume Debt A is a 20 year loan from now for simplicity of visualization if not provided, 
+    // or just reduce it by the monthly payment portion that is principal? 
+    // We only have "currentHomeMortgage" amount. Let's assume 50% is principal.
+    let debtA = inp.currentHomeMortgage * 12 * 15; // Rough guess of remaining balance: 15 years worth of payments
+
+    for (let y = 0; y <= 20; y++) {
         if (y > 0) {
+            // B
             const interestB = debtB * (inp.invRate / 100);
             const principalB = (invMonthlyPI * 12) - interestB;
             debtB -= principalB;
             if (debtB < 0) debtB = 0;
+
+            // A (Rough approx)
+            debtA -= (inp.currentHomeMortgage * 12 * 0.6); // Assume 60% principal
+            if (debtA < 0) debtA = 0;
 
             valA = valA * 1.02;
             valB = valB * 1.02;
@@ -354,8 +430,9 @@ export const calculatePortfolio = (inp: PortfolioInputs): PortfolioResult => {
 
         netWorthProjection.push({
             year: y,
-            equity: (valA + valB) - debtB,
-            debt: debtB
+            equity: (valA + valB) - (debtA + debtB),
+            debt: debtA + debtB,
+            assets: valA + valB
         });
     }
 
